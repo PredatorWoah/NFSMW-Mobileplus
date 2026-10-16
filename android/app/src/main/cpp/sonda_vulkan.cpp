@@ -88,6 +88,11 @@ const char* GeneracionMali(const char* nombre) {
     return "generacion desconocida";
   }
   const int numero = std::atoi(g + 1);
+  // Los nombres nuevos de Arm llevan una sola cifra: "Mali-G1-Ultra" (Dimensity 9500).
+  const bool una_cifra = !(g[2] >= '0' && g[2] <= '9');
+  if (una_cifra) {
+    return "5.a generacion o posterior (nombres nuevos: Mali-G1-Ultra, -Premium, -Pro)";
+  }
   if (numero >= 720) {
     return "5.a generacion (Arm Immortalis/Mali moderno)";
   }

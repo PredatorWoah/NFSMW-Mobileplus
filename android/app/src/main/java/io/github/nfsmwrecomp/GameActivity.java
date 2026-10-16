@@ -68,6 +68,15 @@ public class GameActivity extends SDLActivity {
     /** Milisegundos por fotograma, media del ultimo medio segundo. */
     private static native float nativeMsPorFotograma();
 
+    /** {fps, ms} para el registro en Descargas, o null si el plugin no ha cargado. */
+    private static float[] medidas() {
+        try {
+            return new float[] {nativeFps(), nativeMsPorFotograma()};
+        } catch (UnsatisfiedLinkError e) {
+            return null;
+        }
+    }
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(Idioma.envolver(base));
@@ -114,6 +123,10 @@ public class GameActivity extends SDLActivity {
         argumentos = lista.toArray(new String[0]);
         // Release: sin registro (ver Ajustes.argumentos).
         if (BuildConfig.DEBUG) Log.i(TAG, "Argumentos: " + String.join(" ", argumentos));
+        // El registro en Descargas, si esta puesto: antes de cargar las
+        // librerias, para que salga tambien lo que pase al cargarlas.
+        RegistroDescargas.arrancar(this, lista.contains("--nfsmw_sonda") ? "sonda" : "partida",
+                argumentos, GameActivity::medidas);
         super.onCreate(savedInstanceState);
 
         ajustarSuperficie(intent.getStringExtra(EXTRA_RESOLUCION),
@@ -299,6 +312,7 @@ public class GameActivity extends SDLActivity {
         if (touchController != null) touchController.disconnect();
         reloj.removeCallbacksAndMessages(null);
         super.onDestroy();
+        RegistroDescargas.parar();
         // Proceso propio: al cerrar la partida, fuera. Asi la siguiente arranca
         // con las librerias nativas sin cargar.
         android.os.Process.killProcess(android.os.Process.myPid());

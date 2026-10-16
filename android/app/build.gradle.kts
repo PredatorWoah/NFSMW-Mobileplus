@@ -112,6 +112,12 @@ android {
         // El log del juego tambien en release, para diagnosticar un movil:
         //     gradlew assembleRelease -Pnfsmw.registro=true
         buildConfigField("boolean", "REGISTRO", ((findProperty("nfsmw.registro") as String?) == "true").toString())
+        // El registro en Descargas (RegistroDescargas) puesto de fabrica, para
+        // un APK de pruebas que se manda a otro movil (el de la CI):
+        //     gradlew assembleRelease -Pnfsmw.registroDescargas=true
+        // Con o sin esto, se enciende y apaga en Avanzado.
+        buildConfigField("boolean", "REGISTRO_DESCARGAS",
+            ((findProperty("nfsmw.registroDescargas") as String?) == "true").toString())
 
         ndk {
             // Solo ARM64: el codigo generado, las rutas NEON y adrenotools.

@@ -132,6 +132,24 @@ La proporción la pone la vista y el presentador llena el búfer entero, con
 
 El log lo confirma con `Superficie: vista WxH, bufer WxH`.
 
+### El registro en Descargas, para un móvil sin adb
+
+**Avanzado > Guardar el registro en Descargas** (`RegistroDescargas.java`). Con él puesto,
+cada partida y cada prueba de Vulkan deja en `Download/NFSMW-logs/`:
+
+| Fichero | Qué lleva |
+|---|---|
+| `nfsmw_<fecha>_<partida\|sonda>.txt` | Cabecera: móvil, SoC, Android, GPU (y si se tomó por débil), RAM, cada núcleo con `cpu_capacity`, frecuencia máxima, gobernador y modelo de Arm, modos de pantalla, ajustes y argumentos (la ISO no). Después, el logcat entero de la app mientras dura (el SDK, el driver de Vulkan, SDL, Java), con una línea `nfsmw-diag` cada 5 s: fps, ms, estado y margen térmico, batería y su temperatura, RAM libre, RSS, montón nativo y MHz de cada núcleo |
+| `..._juego.log` | El `log_file` del juego, copiado cada segundo según crece: el logcat puede perder líneas y en algunos móviles va capado |
+| `nfsmw_<fecha>_salida.txt` | Al volver a abrir la app, si la partida acabó mal: el motivo de Android (`ApplicationExitInfo`: fallo, fallo nativo, ANR, sin memoria...), la traza de un ANR y el logcat que quedaba |
+| `..._salida_tombstone.pb` | En un fallo nativo (Android 12+), el tombstone de debuggerd, en protobuf |
+| `nfsmw_<fecha>_sonda_vulkan.txt` | El informe de la sonda, cada vez que sale uno nuevo |
+
+Todo se escribe y se vacía según llega: lo escrito sobrevive a un fallo. Va por MediaStore,
+sin permisos; si el sistema no deja, a `Android/data/io.github.nfsmwrecomp/files/logs`. Sube el
+registro del juego a `debug`, que cuesta algo de fps: apagarlo para jugar. El APK de la CI
+(`.github/workflows/android-sonda.yml`) lo trae puesto (`-Pnfsmw.registroDescargas=true`).
+
 ### Banco de pruebas desde adb
 
 Para comparar ajustes sin tocar la pantalla, la pantalla de inicio acepta:

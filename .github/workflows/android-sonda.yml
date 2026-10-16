@@ -1,0 +1,70 @@
+# APK de pruebas: el lanzador, la sonda de Vulkan y el registro en Descargas
+# puesto de fabrica (Avanzado > Guardar el registro en Descargas).
+#
+# SIN EL JUEGO. El codigo del juego sale de TU default.xex (y el motor nativo,
+# de tu ISO) y un artefacto de Actions lo puede bajar cualquiera con acceso al
+# repositorio: aqui nunca entra. El paso "Sin codigo del juego" lo comprueba.
+# El APK para jugar se compila en tu PC: ver docs/android.md.
+#
+# Sirve para probar un movil y su driver sin el juego: "Probar Vulkan" dice si
+# la GPU sirve y con que caminos, y deja el informe en Download/NFSMW-logs.
+
+name: APK de pruebas (sonda de Vulkan)
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - "tools/**"
+      - ".github/workflows/android-sonda.yml"
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sin codigo del juego
+        run: |
+          for d in app/generated-android assets/game_root nativo/app/generated nativo/out; do
+            if [ -e "$d" ]; then echo "::error::$d no puede estar en la CI"; exit 1; fi
+          done
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: SDK de Android, NDK y CMake
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "cmake;3.31.6"
+
+      # El SDK clonado y parcheado: depende solo de los scripts que lo preparan.
+      - uses: actions/cache@v4
+        with:
+          path: ../rexglue-sdk-android
+          key: rexglue-sdk-android-${{ hashFiles('tools/android/preparar_sdk.py', 'tools/parche_*.py') }}
+
+      - name: Preparar el SDK (tools/android/preparar_sdk.py)
+        run: python3 tools/android/preparar_sdk.py
+
+      - name: Compilar
+        working-directory: android
+        run: ./gradlew assembleRelease -Pnfsmw.registroDescargas=true --no-daemon
+
+      - name: Comprobar que es el APK de la sonda
+        run: |
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          ls -la "$apk"
+          if unzip -l "$apk" | grep -q 'assets/nativo/'; then
+            echo "::error::el APK lleva la biblioteca de shaders del juego"; exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nfsmw-sonda-${{ github.sha }}
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 14
