@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Sin codigo del juego
         run: |
@@ -32,15 +32,19 @@ jobs:
             if [ -e "$d" ]; then echo "::error::$d no puede estar en la CI"; exit 1; fi
           done
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
-      - uses: android-actions/setup-android@v3
-
+      # El SDK de Android ya viene en el runner ($ANDROID_HOME). Sin
+      # android-actions/setup-android: pide el paquete "tools", que Google ya
+      # no publica, y falla antes de empezar.
       - name: SDK de Android, NDK y CMake
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "cmake;3.31.6"
+        run: |
+          sdkm=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$sdkm" --licenses > /dev/null
+          "$sdkm" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358" "cmake;3.31.6"
 
       # El SDK clonado y parcheado: depende solo de los scripts que lo preparan.
       - uses: actions/cache@v4
