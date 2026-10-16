@@ -135,6 +135,18 @@ android {
                     "-DNFSMW_SDK=${sdkAndroid.absolutePath}",
                     "-DREX_BUILD_DIAGNOSTICS=OFF",
                 )
+                // Ficheros del codigo generado a la vez (y hilos de ThinLTO): cada
+                // uno puede pedir mas de 2 GB a clang. Por defecto 4, para 16 GB de
+                // RAM; con 8 (un MacBook M1 basico), 2:
+                //     gradlew assembleRelease -Pnfsmw.trabajos=2
+                // Solo si se pide, como las de abajo: cambiar los argumentos cambia
+                // la carpeta de compilacion de AGP y lo recompila todo.
+                (findProperty("nfsmw.trabajos") as String?)?.let {
+                    require(it.toIntOrNull()?.let { n -> n >= 1 } == true) {
+                        "nfsmw.trabajos tiene que ser un numero desde 1 (es '$it')"
+                    }
+                    arguments += "-DNFSMW_JOBS_RECOMP=$it"
+                }
                 // Solo si se pide otra carpeta: AGP da a cada juego de argumentos
                 // su propia carpeta de compilacion, y cambiarlos en el caso
                 // normal obligaria a recompilarlo todo.

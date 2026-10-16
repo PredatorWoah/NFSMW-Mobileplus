@@ -62,7 +62,30 @@ edición. El APK que sale vale solo para esa edición. Ver [ediciones.md](edicio
 
 La primera compilación del APK tarda (el SDK entero y 133 ficheros generados).
 Los ficheros generados se compilan de 4 en 4 (`NFSMW_JOBS_RECOMP`): con 16 GB de
-RAM y 8 a la vez, clang se queda sin memoria.
+RAM y 8 a la vez, clang se queda sin memoria. Con 8 GB, de 2 en 2:
+`gradlew assembleRelease -Pnfsmw.trabajos=2`.
+
+### En un Mac (Apple Silicon) o en Linux
+
+Sin Visual Studio: el SDK ReXGlue compila en macOS y Linux, y los scripts no dependen de
+Windows. Probado en Linux hasta compilar el generador (`rexglue`, 862/862) con Clang 20;
+en un Mac, sin probar todavía. Hace falta **Clang 20 o más nuevo** en el PATH: con el 18
+de Ubuntu 24.04 falla `std::expected` (`rex/system/map_parser.h`). En Linux, además, las
+cabeceras de X11 y Wayland que pide SDL para el generador (`libx11-xcb-dev`,
+`libxcursor-dev`, `libwayland-dev`...).
+
+```bash
+xcode-select --install
+brew install llvm cmake ninja python node
+export PATH="$(brew --prefix llvm)/bin:$PATH"     # clang++ --version: 20 o mas
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+python3 tools/android/preparar_nativo.py --iso ~/ruta/PAL_ES.iso
+python3 tools/android/preparar_nativo.py --iso ~/ruta/USA.iso     # otra edicion, si hace falta
+cd android
+./gradlew assembleRelease -Pnfsmw.motor=nativo -Pnfsmw.edicion=usa -Pnfsmw.trabajos=2
+```
+
+NDK 28.2.13676358 y CMake 3.31.6, desde el SDK Manager de Android Studio, como en Windows.
 
 ## En el móvil
 
