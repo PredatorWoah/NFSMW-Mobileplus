@@ -353,6 +353,11 @@ final class RegistroDescargas {
                 s.append(" (POCA)");
             }
         }
+        Display pantalla = ctx.getSystemService(android.hardware.display.DisplayManager.class)
+                .getDisplay(Display.DEFAULT_DISPLAY);
+        if (pantalla != null) {
+            s.append(String.format(Locale.ROOT, " hz=%.0f", pantalla.getRefreshRate()));
+        }
         s.append(" rss=").append(rssMb()).append("MB");
         s.append(" heap_nativo=").append(Debug.getNativeHeapAllocatedSize() >> 20).append("MB");
         s.append(" mhz=");

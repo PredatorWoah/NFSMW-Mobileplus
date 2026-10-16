@@ -10,6 +10,14 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- La pantalla, a juego con el tope de fps (`GameActivity.ajustarFrecuencia`): al empezar la
+  partida se pide el modo de la misma resolución con el múltiplo más bajo desde 60 Hz (30 y
+  60 fps a 60 Hz, 90 a 90, 120 y sin límite a 120 en un panel de 120) y se le dice al sistema
+  a cuántos fps va el contenido (`Surface.setFrameRate`). 60 fps en una pantalla a 90 Hz,
+  como deja de fábrica un vivo con Dimensity 9500, alternan fotogramas de 2 y 1 refrescos y
+  tiemblan aunque los fps estén clavados. Con el motor de Xenos, 60. La línea `diag` del
+  registro en Descargas lleva los Hz.
+
 - Registro en Descargas (Avanzado > Guardar el registro en Descargas): cada partida y cada
   prueba de Vulkan deja en `Download/NFSMW-logs/` la cabecera del móvil (SoC, núcleos con su
   `cpu_capacity`, GPU, pantalla, ajustes y argumentos), el logcat entero de la app, el
