@@ -83,6 +83,9 @@ final class RegistroDescargas {
     private final OutputStream salidaJuego;
     private final MedidorFps fps;
     private Process logcat;
+    /** Desde cuando se lee el logcat (-T), y cuantas lineas ha escrito ya el hilo. */
+    private String desde;
+    private long lineasLogcat;
     private volatile boolean parar;
     private Thread hiloLogcat;
     private Thread hiloCopia;
@@ -172,7 +175,7 @@ final class RegistroDescargas {
         // Solo lo de esta app (Android no deja leer el de otras) y desde ahora:
         // sin -T saldria todo lo que quede en el bufer de sesiones anteriores.
         long ahora = System.currentTimeMillis();
-        String desde = String.format(Locale.ROOT, "%d.%03d", ahora / 1000, ahora % 1000);
+        desde = String.format(Locale.ROOT, "%d.%03d", ahora / 1000, ahora % 1000);
         hiloLogcat = new Thread(() -> {
             try {
                 logcat = new ProcessBuilder("logcat", "-v", "threadtime", "-T", desde)
@@ -183,6 +186,7 @@ final class RegistroDescargas {
                     String linea;
                     while (!parar && (linea = in.readLine()) != null) {
                         bloque.append(linea).append('\n');
+                        lineasLogcat++;
                         // De golpe lo que ya haya llegado, y se vacia al quedarse
                         // sin nada pendiente: pocas escrituras y nada atrasado.
                         if (!in.ready() || bloque.length() > (1 << 14)) {
@@ -231,15 +235,50 @@ final class RegistroDescargas {
             } catch (InterruptedException ignored) {
             }
         }
-        // Lo que el logcat aun no haya entregado (las ultimas lineas) se pierde
-        // al matarlo; da igual: esta sesion acaba bien.
         if (logcat != null) {
             logcat.destroy();
         }
+        if (hiloLogcat != null) {
+            try {
+                hiloLogcat.join(1000);
+            } catch (InterruptedException ignored) {
+            }
+        }
+        // El logcat entrega con retraso: una sesion corta (la sonda dura un
+        // segundo) acababa antes de que llegara casi nada, y con ello el motivo
+        // por el que el SDK rechaza la GPU. Lo que falte, de su bufer: las
+        // mismas lineas en el mismo orden, asi que se saltan las ya escritas.
+        terminarLogcat();
         escribir("\n=== fin " + fecha() + " ===\n");
         cerrar(salida);
         if (salidaJuego != null) {
             cerrar(salidaJuego);
+        }
+    }
+
+    private void terminarLogcat() {
+        try {
+            Process lc = new ProcessBuilder("logcat", "-d", "-v", "threadtime", "-T", desde)
+                    .redirectErrorStream(true).start();
+            StringBuilder resto = new StringBuilder();
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(
+                    lc.getInputStream(), StandardCharsets.UTF_8), 1 << 16)) {
+                long saltar = lineasLogcat;
+                String linea;
+                while ((linea = in.readLine()) != null) {
+                    if (saltar > 0) {
+                        saltar--;
+                    } else {
+                        resto.append(linea).append('\n');
+                    }
+                }
+            }
+            lc.waitFor();
+            if (resto.length() > 0) {
+                escribir(resto.toString());
+            }
+        } catch (IOException | InterruptedException e) {
+            escribir("\n[registro] no se pudo leer el final del logcat: " + e + "\n");
         }
     }
 

@@ -191,6 +191,61 @@ void SondearDispositivo(Informe& inf, const VulkanInstance& instancia, VkPhysica
   inf.Linea(fmt::format("Enteros de 64 bits en shaders (shaderInt64): {}",
                         rasgos_base.shaderInt64 ? "si" : "NO"));
 
+  // Lo que exige el SDK para emular la Xenos (VulkanDevice::CreateIfSupported), dicho aqui y no
+  // solo en el log: el de la sonda va unicamente a logcat, que en algunos moviles va capado.
+  {
+    const std::pair<bool, const char*> xenos[] = {
+        {rasgos_base.independentBlend != 0, "independentBlend"},
+        {rasgos_base.fragmentStoresAndAtomics != 0, "fragmentStoresAndAtomics"},
+        {rasgos_base.vertexPipelineStoresAndAtomics != 0, "vertexPipelineStoresAndAtomics"},
+    };
+    std::string faltan;
+    for (const auto& [ok, nombre] : xenos) {
+      if (!ok) {
+        faltan += faltan.empty() ? nombre : fmt::format(", {}", nombre);
+      }
+    }
+    inf.Linea(faltan.empty() ? "Emular la Xenos: tiene los rasgos que pide el SDK"
+                             : "Emular la Xenos: falta " + faltan);
+  }
+
+#if !NFSMW_MOTOR_NATIVO
+  // El APK del motor de Xenos no lleva el renderizador nativo, pero se puede decir si le serviria
+  // esta GPU: los rasgos que comprueba al empezar (nfsmw_nativo_dibujos.cpp, Inicializar), leidos
+  // del driver. El montón de texturas, por descriptor indexing (Vulkan 1.2 o la extension).
+  if (ifn.vkGetPhysicalDeviceFeatures2) {
+    VkPhysicalDeviceDescriptorIndexingFeatures indexado{};
+    indexado.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    VkPhysicalDeviceFeatures2 rasgos2{};
+    rasgos2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    rasgos2.pNext = &indexado;
+    ifn.vkGetPhysicalDeviceFeatures2(fisico, &rasgos2);
+    const std::pair<bool, const char*> nativo[] = {
+        {rasgos_base.independentBlend != 0, "independentBlend"},
+        {rasgos_base.shaderSampledImageArrayDynamicIndexing != 0,
+         "shaderSampledImageArrayDynamicIndexing"},
+        {indexado.runtimeDescriptorArray != 0, "runtimeDescriptorArray"},
+        {indexado.descriptorBindingPartiallyBound != 0, "descriptorBindingPartiallyBound"},
+        {indexado.descriptorBindingSampledImageUpdateAfterBind != 0,
+         "descriptorBindingSampledImageUpdateAfterBind"},
+        {indexado.descriptorBindingUpdateUnusedWhilePending != 0,
+         "descriptorBindingUpdateUnusedWhilePending"},
+    };
+    std::string faltan;
+    for (const auto& [ok, nombre] : nativo) {
+      if (!ok) {
+        faltan += faltan.empty() ? nombre : fmt::format(", {}", nombre);
+      }
+    }
+    inf.Linea(faltan.empty()
+                  ? "MOTOR NATIVO (por los rasgos del driver, sin crear su dispositivo): sirve"
+                  : "MOTOR NATIVO (por los rasgos del driver): NO sirve, falta " + faltan);
+    if (faltan.empty() && !bc_en_cpu.empty()) {
+      inf.Linea("  - texturas " + bc_en_cpu + ": se descomprimirian en la CPU");
+    }
+  }
+#endif
+
 #if NFSMW_MOTOR_NATIVO
   // El dispositivo como lo crea el motor nativo en Android
   // (nfsmw_nativo_sistema.cpp): sin emulacion de la Xenos y con lo que piden
