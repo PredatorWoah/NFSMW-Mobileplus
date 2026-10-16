@@ -199,7 +199,10 @@ final class RegistroDescargas {
                     }
                 }
             } catch (IOException e) {
-                escribir("\n[registro] logcat no disponible: " + e + "\n");
+                // Al cerrar, destroy() corta la lectura a medias: no es un fallo.
+                if (!parar) {
+                    escribir("\n[registro] logcat no disponible: " + e + "\n");
+                }
             }
         }, "NFS registro logcat");
         hiloLogcat.setDaemon(true);
