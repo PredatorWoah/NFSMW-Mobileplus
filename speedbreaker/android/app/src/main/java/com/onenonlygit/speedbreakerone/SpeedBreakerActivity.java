@@ -18,8 +18,11 @@ public final class SpeedBreakerActivity extends SDLActivity {
     private static native void nativeDiscResult(int fd, String name, String error);
 
     @Override protected void onCreate(Bundle state) {
+        // Before SDL loads the native libraries, so loading problems are logged too.
+        DownloadsLog.start(this, BuildConfig.PLATFORM_PROBE ? "probe" : "game");
         super.onCreate(state);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (!BuildConfig.PLATFORM_PROBE) preferSixtyHertz();
         WindowManager.LayoutParams windowParams = getWindow().getAttributes();
         windowParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         getWindow().setAttributes(windowParams);
@@ -159,7 +162,41 @@ public final class SpeedBreakerActivity extends SDLActivity {
         if (touchControls != null) touchControls.pause();
         if (probeBack != null) getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(probeBack);
         super.onDestroy();
+        DownloadsLog.stop();
         android.os.Process.killProcess(android.os.Process.myPid());
+    }
+
+    // The game runs at 60 or 30 fps (Frame Rate: 60, 30, or Auto, which drops
+    // to 30 when hot). On a panel left at 90 Hz, as a Vivo X300 Pro ships,
+    // neither divides the refresh: frames alternate 2 and 1 refreshes and
+    // motion judders with the fps locked. Ask for the panel's 60 Hz mode at
+    // its current resolution (or the lowest multiple of 60), and tell the
+    // system the content's rate so it does not switch back on its own.
+    private void preferSixtyHertz() {
+        android.view.Display display = getDisplay();
+        if (display == null || mSurface == null) return;
+        android.view.Display.Mode now = display.getMode(), best = null;
+        for (android.view.Display.Mode m : display.getSupportedModes()) {
+            if (m.getPhysicalWidth() != now.getPhysicalWidth() || m.getPhysicalHeight() != now.getPhysicalHeight()) continue;
+            float times = m.getRefreshRate() / 60f;
+            boolean multiple = Math.round(times) >= 1 && Math.abs(times - Math.round(times)) < 0.02f;
+            if (multiple && (best == null || m.getRefreshRate() < best.getRefreshRate())) best = m;
+        }
+        if (best == null) return;
+        WindowManager.LayoutParams params = getWindow().getAttributes();
+        params.preferredDisplayModeId = best.getModeId();
+        getWindow().setAttributes(params);
+        android.util.Log.i("SpeedBreakerOne", String.format(java.util.Locale.ROOT,
+                "[display] %dx%d@%.0f Hz for 60/30 fps (was %.0f Hz)", best.getPhysicalWidth(),
+                best.getPhysicalHeight(), best.getRefreshRate(), now.getRefreshRate()));
+        mSurface.getHolder().addCallback(new android.view.SurfaceHolder.Callback() {
+            @Override public void surfaceCreated(android.view.SurfaceHolder h) {
+                try { h.getSurface().setFrameRate(60f, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE); }
+                catch (IllegalArgumentException | IllegalStateException e) { android.util.Log.w("SpeedBreakerOne", "[display] setFrameRate: " + e); }
+            }
+            @Override public void surfaceChanged(android.view.SurfaceHolder h, int format, int w, int hgt) { }
+            @Override public void surfaceDestroyed(android.view.SurfaceHolder h) { }
+        });
     }
 
     public String gpuDriverDirectory() { String s=getIntent().getStringExtra("driver_dir"); return s==null?"":s; }

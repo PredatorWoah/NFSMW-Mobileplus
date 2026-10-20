@@ -54,6 +54,10 @@ public final class LauncherActivity extends Activity {
             action.setMinHeight((int)(72 * getResources().getDisplayMetrics().density));
             actions.addView(action, size);
         }
+        Button logs = new Button(this);
+        logs.setOnClickListener(v -> { DownloadsLog.setEnabled(this, !DownloadsLog.enabled(this)); logsLabel(logs); });
+        logsLabel(logs);
+        panel.addView(logs);
         TextView help = new TextView(this);
         help.setText("Import an ARM64 Turnip driver ZIP with meta.json. System driver is always available. Driver changes apply to a new game process; Resume keeps its current driver.");
         panel.addView(help);
@@ -61,6 +65,12 @@ public final class LauncherActivity extends Activity {
         scroll.setFillViewport(true);
         scroll.addView(panel);
         setContentView(scroll); refresh();
+        // Why the last game process ended, if it ended badly (DownloadsLog). Reads logcat: off the UI thread.
+        android.content.Context app = getApplicationContext();
+        new Thread(() -> DownloadsLog.reportExits(app), "exit-report").start();
+    }
+    private void logsLabel(Button b) {
+        b.setText(DownloadsLog.enabled(this) ? "Logs to Downloads: ON (SpeedBreaker-logs)" : "Logs to Downloads: OFF");
     }
     @Override protected void onResume() { super.onResume(); if (status != null) refresh(); }
     private int gamePid() {
