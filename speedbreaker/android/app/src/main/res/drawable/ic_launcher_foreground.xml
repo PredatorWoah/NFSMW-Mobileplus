@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SpeedBreaker One app icon (original artwork, GPL-3.0-or-later): a
+     speedometer with its red line and the needle near the top. The
+     adaptive icon's safe zone is the centre 66 of 108; everything is in it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Dial: 270 degrees, open at the bottom. -->
+    <path android:pathData="M31.48,71 A26,26 0 1,1 76.52,71"
+        android:strokeColor="#FF7A1A" android:strokeWidth="6" android:strokeLineCap="round" />
+    <!-- Red line: the last 60 degrees. -->
+    <path android:pathData="M76.52,45 A26,26 0 0,1 76.52,71"
+        android:strokeColor="#E8202A" android:strokeWidth="6" android:strokeLineCap="round" />
+    <!-- Ticks. -->
+    <path android:pathData="M37.4,48.4 L40.8,50.4 M54,36 L54,40 M70.6,48.4 L67.2,50.4"
+        android:strokeColor="#FFFFFF" android:strokeAlpha="0.7" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Needle, pinned near the top of the dial. -->
+    <path android:pathData="M52.57,55.95 L72.0,45.4 L55.43,60.05 Z" android:fillColor="#FFFFFF" />
+    <path android:pathData="M54,53.5 A4.5,4.5 0 1,1 53.99,53.5 Z" android:fillColor="#FFFFFF" />
+    <path android:pathData="M54,56 A2,2 0 1,1 53.99,56 Z" android:fillColor="#101418" />
+    <!-- Speed streaks under the dial. -->
+    <path android:pathData="M40,78 L68,78 M45,83 L63,83"
+        android:strokeColor="#FF7A1A" android:strokeAlpha="0.85" android:strokeWidth="2.5" android:strokeLineCap="round" />
+</vector>

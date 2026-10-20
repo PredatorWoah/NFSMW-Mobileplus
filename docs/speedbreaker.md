@@ -61,9 +61,42 @@ de flujo de control, los de predicados y los de BC.
   ese Vivo, ninguno divide el refresco y la imagen tiembla con los fps clavados. Se pide el modo
   de 60 Hz (o el múltiplo de 60 más bajo) y `Surface.setFrameRate(60)`.
 
+## Controles táctiles
+
+Dos disposiciones (`TouchGamepadView.java`), cada una con su editor y sus posiciones guardadas
+aparte. La barra de arriba cambia de una a otra en cualquier momento, abre el editor de la que
+se ve (arrastrar, SIZE − / +, SAVE, RESET, CANCEL) y el menú CHEATS.
+
+| RACING (rotulada por lo que hace) | Botón del mando |
+|---|---|
+| GAS | RT |
+| BRAKE | LT |
+| ◀ ▶ (se puede deslizar de una a otra sin levantar el dedo) | eje x del stick izquierdo |
+| NITRO | B |
+| HANDBRAKE | A |
+| LOOK BACK | Y |
+| SLOW TIME (SpeedBreaker) | X |
+| PAUSE / BACK | START / BACK |
+| ▲ ▼ (menús) | cruceta arriba / abajo |
+
+XBOX es el mando de la 360 tal cual: los dos sticks analógicos (el dedo puede salirse del
+círculo sin soltarlo), la cruceta, A B X Y, LB RB LT RT, BACK y START.
+
+Se guardan como fracciones de la pantalla en `touch_layout_racing` y `touch_layout_xbox`; la
+que se ve, en `touch_layouts`. **Edit touch controls**, en el lanzador, abre las dos fuera de la
+partida (`ControlsEditorActivity`): sirve en un APK sin el juego, y lo guardado ahí es lo que
+sale al jugar.
+
+El APK de la CI (`speedbreaker-sonda.yml`) se instala **al lado** del juego, como
+`com.onenonlygit.speedbreakerone.test` («SpeedBreaker Test»), con
+`-PsbAppIdSuffix=.test -PsbAppName="SpeedBreaker Test"`: tiene otra clave de firma y, con el
+mismo paquete, no se podría instalar encima sin desinstalar el juego y sus partidas. Sin esas
+opciones, el paquete y el nombre de siempre. Las disposiciones guardadas en el de pruebas son
+suyas; las del juego se editan en el juego (o en su lanzador).
+
 ## Trucos (menú CHEATS)
 
-Botón **CHEATS** arriba a la derecha en la partida (`CheatsMenu.java`). Solo ofrece lo que tiene
+Botón **CHEATS** arriba a la derecha en la partida, en la barra de los controles táctiles (`CheatsMenu.java`). Solo ofrece lo que tiene
 una fuente; nada de interruptores que no hagan nada.
 
 | Truco | Cómo | Estado |

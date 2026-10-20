@@ -56,6 +56,10 @@ public final class LauncherActivity extends Activity {
             action.setMinHeight((int)(72 * getResources().getDisplayMetrics().density));
             actions.addView(action, size);
         }
+        Button controls = new Button(this);
+        controls.setText("Edit touch controls (racing and Xbox layouts)");
+        controls.setOnClickListener(v -> startActivity(new Intent(this, ControlsEditorActivity.class)));
+        panel.addView(controls);
         Button logs = new Button(this);
         logs.setOnClickListener(v -> { DownloadsLog.setEnabled(this, !DownloadsLog.enabled(this)); logsLabel(logs); });
         logsLabel(logs);

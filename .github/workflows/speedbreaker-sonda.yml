@@ -3,9 +3,10 @@
 # el registro en Descargas. Dice que tiene la GPU y si el runtime arranca, sin
 # el disco. Ver docs/speedbreaker.md.
 #
-# Firmado con una clave desechable creada en cada ejecucion: sirve para
-# instalar la sonda, no para actualizar una instalacion firmada con la clave
-# propia (SB_KEYSTORE), que nunca entra en la CI.
+# Firmado con una clave desechable creada en cada ejecucion, y con otro
+# paquete (com.onenonlygit.speedbreakerone.test, "SpeedBreaker Test"): se
+# instala AL LADO del juego, sin tocarlo ni a sus partidas. Trae el editor de
+# los controles tactiles (Edit touch controls) y el icono.
 
 name: APK de pruebas de SpeedBreaker (sonda)
 
@@ -47,7 +48,9 @@ jobs:
         working-directory: speedbreaker/android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          bash gradlew --no-daemon -PsbDiagnostics=ON -PsbBringup=ON -PsbCmakeVersion=3.31.6 :app:assembleRelease
+          # .test: se instala al lado del juego (otro paquete), no encima.
+          bash gradlew --no-daemon -PsbDiagnostics=ON -PsbBringup=ON -PsbCmakeVersion=3.31.6 \
+            "-PsbAppIdSuffix=.test" "-PsbAppName=SpeedBreaker Test" :app:assembleRelease
 
       - name: Firmar con una clave desechable
         run: |

@@ -48,19 +48,9 @@ public final class SpeedBreakerActivity extends SDLActivity {
             touchControls = new TouchGamepadView(this);
             mLayout.addView(touchControls, new android.widget.RelativeLayout.LayoutParams(
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT));
-            // CHEATS, top right, above the touch controls (CheatsMenu).
-            android.widget.Button cheats = new android.widget.Button(this);
-            cheats.setText("CHEATS");
-            cheats.setAlpha(0.75f);
+            // CHEATS, top right in the touch controls' bar (CheatsMenu).
             CheatsMenu menu = new CheatsMenu(this, touchControls);
-            cheats.setOnClickListener(v -> menu.show());
-            android.widget.RelativeLayout.LayoutParams at = new android.widget.RelativeLayout.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            at.addRule(android.widget.RelativeLayout.ALIGN_PARENT_END);
-            at.addRule(android.widget.RelativeLayout.ALIGN_PARENT_TOP);
-            int margin = (int)(8 * getResources().getDisplayMetrics().density);
-            at.setMargins(margin, margin, margin, margin);
-            mLayout.addView(cheats, at);
+            touchControls.setOnCheats(menu::show);
         }
     }
 
