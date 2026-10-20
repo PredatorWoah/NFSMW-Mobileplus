@@ -1,0 +1,67 @@
+# APK de pruebas de SpeedBreaker (speedbreaker/, el motor para Mali): su
+# sonda de la plataforma, SIN EL JUEGO (-PsbDiagnostics=ON -PsbBringup=ON), con
+# el registro en Descargas. Dice que tiene la GPU y si el runtime arranca, sin
+# el disco. Ver docs/speedbreaker.md.
+#
+# Firmado con una clave desechable creada en cada ejecucion: sirve para
+# instalar la sonda, no para actualizar una instalacion firmada con la clave
+# propia (SB_KEYSTORE), que nunca entra en la CI.
+
+name: APK de pruebas de SpeedBreaker (sonda)
+
+on:
+  push:
+    paths:
+      - "speedbreaker/**"
+      - ".github/workflows/speedbreaker-sonda.yml"
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Sin codigo del juego
+        run: |
+          for d in speedbreaker/ppc speedbreaker/game speedbreaker/private; do
+            if [ -e "$d" ]; then echo "::error::$d no puede estar en la CI"; exit 1; fi
+          done
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: SDK de Android, NDK y CMake
+        run: |
+          sdkm=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$sdkm" --licenses > /dev/null
+          "$sdkm" "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358" "cmake;3.31.6"
+
+      - name: SDL (prepare_deps.sh --probe-only)
+        run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358" bash speedbreaker/scripts/android/prepare_deps.sh --probe-only
+
+      - name: Compilar la sonda
+        working-directory: speedbreaker/android
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          bash gradlew --no-daemon -PsbDiagnostics=ON -PsbBringup=ON -PsbCmakeVersion=3.31.6 :app:assembleRelease
+
+      - name: Firmar con una clave desechable
+        run: |
+          bt="$ANDROID_HOME/build-tools/35.0.0"
+          keytool -genkeypair -keystore ci.jks -storepass cisonda -keypass cisonda -alias ci \
+            -keyalg RSA -keysize 2048 -validity 30 -dname "CN=SpeedBreaker sonda CI" > /dev/null
+          in=speedbreaker/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$bt/zipalign" -f -P 16 4 "$in" aligned.apk
+          "$bt/apksigner" sign --ks ci.jks --ks-pass pass:cisonda --out speedbreaker-sonda.apk aligned.apk
+          "$bt/apksigner" verify speedbreaker-sonda.apk
+          ls -la speedbreaker-sonda.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: speedbreaker-sonda-${{ github.sha }}
+          path: speedbreaker-sonda.apk
+          retention-days: 14

@@ -10,6 +10,23 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **Un tercer motor, SpeedBreaker, para Mali** ([speedbreaker/](speedbreaker/), ver
+  [docs/speedbreaker.md](docs/speedbreaker.md)): otra recompilación del juego, con su propio
+  runtime y su propia emulación de la GPU, en el fork Android de onenonlygit, traída de
+  [PredatorWoah/speedbreaker-mali](https://github.com/PredatorWoah/speedbreaker-mali)
+  (`android/rp6-bringup`, `3fd1250`) con las 8 correcciones de una sesión de Codex en un Vivo
+  X300 Pro (Dimensity 9500, Mali-G1-Ultra, Android 17): el cuelgue de minutos del compilador
+  de shaders de Mali al cargar la partida guardada (flujo de control solo hacia delante, de
+  >20 s a 0,06 s), las rayas y bloques verdes de vídeos y menús (memoria del juego por copia
+  en ese driver), las texturas BC descomprimidas en la GPU, el mando táctil con su editor y el
+  lanzador en apaisado. Se compila solo con el disco USA y corre en ese móvil a ~45–60 fps
+  según el usuario; el motor de Xenos no puede en Mali (le falta
+  `vertexPipelineStoresAndAtomics`). Fuera se quedaron sus APK con el juego dentro. Encima:
+  los arreglos de Mali se activan para toda la familia Mali-G1 y no solo con un driver exacto
+  (una actualización del sistema los apagaba en silencio), registro en
+  `Download/SpeedBreaker-logs/` y la pantalla a 60 Hz al jugar. CI:
+  `.github/workflows/speedbreaker-sonda.yml`, su sonda sin juego.
+
 - La pantalla, a juego con el tope de fps (`GameActivity.ajustarFrecuencia`): al empezar la
   partida se pide el modo de la misma resolución con el múltiplo más bajo desde 60 Hz (30 y
   60 fps a 60 Hz, 90 a 90, 120 y sin límite a 120 en un panel de 120) y se le dice al sistema

@@ -28,6 +28,24 @@ and the [CHANGELOG](CHANGELOG.md). Everything it changes in the ReXGlue SDK is i
 > accepted by a human. The documentation records what was measured and what was not; trust
 > the numbers in it, not the confidence of any comment. Review the code before reusing it.
 
+### Three engines
+
+This repository now carries three ways to run the game on a phone. They share nothing at
+runtime; pick by GPU and by which disc you have.
+
+| Engine | Where | Emulates the Xbox 360 GPU? | Discs needed to build | Best on |
+|---|---|---|---|---|
+| Xenos (default) | `android/`, the ReXGlue SDK | Yes, the SDK's (from Xenia) | One, any supported edition | Snapdragon/Adreno. **Not Mali**: needs `vertexPipelineStoresAndAtomics` |
+| Native | `nativo/` (nfsmw-android) | No, draws the game's own command list | PAL Spain, plus your edition's disc for the others | Adreno; Mali in principle (driver features pass), never run on one |
+| SpeedBreaker | `speedbreaker/` (SpeedBreaker One) | Yes, its own renderer | **USA only** | **Mali-G1** (measured), others untested |
+
+[speedbreaker/](speedbreaker/) is [SpeedBreaker](https://github.com/SpeedBreakerProject/speedbreaker)
+in onenonlygit's Android fork, imported from
+[PredatorWoah/speedbreaker-mali](https://github.com/PredatorWoah/speedbreaker-mali) with the
+fixes a Codex session made on the Vivo X300 Pro (Mali shader compiler stall, video and menu
+corruption, BC textures, touch controls), plus a driver-update guard, logs to Downloads and a
+60 Hz display request. Its build is separate: see [docs/speedbreaker.md](docs/speedbreaker.md).
+
 ---
 
 ## Status
@@ -47,6 +65,7 @@ at 854×480.
 | Internal resolution scaling | Working, up to 4× |
 | Save games | Working |
 | Multiplayer | **Not working.** The privilege gate is solved; the network layer underneath is not. See [docs/diario/red-y-privilegios.md](docs/diario/red-y-privilegios.md) |
+| Android, Mali (SpeedBreaker engine) | **Racing on a Vivo X300 Pro** (Dimensity 9500, Mali-G1-Ultra, Android 17) from the USA disc alone, ~45–60 fps reported. A separate engine in [speedbreaker/](speedbreaker/): see [Three engines](#three-engines) and [docs/speedbreaker.md](docs/speedbreaker.md) |
 | Android (Snapdragon, Turnip) | **In progress.** Boots from the ISO, reaches the menus and races with a Bluetooth controller, with sound. Main menu (3D) at ~50 fps on a Snapdragon 8 Elite with the Qualcomm driver; Turnip loads but is far slower. See [docs/android.md](docs/android.md) |
 
 ## What you need
@@ -355,6 +374,11 @@ Thanks to everyone whose work this stands on.
 - [codepdbh/nfsmw-android](https://github.com/codepdbh/nfsmw-android) — the Android port of
   nfsmw-nx. The optional native engine (`-Pnfsmw.motor=nativo`) builds against its tree: its
   SDK fork, its app and its native renderer. See [docs/motor-nativo.md](docs/motor-nativo.md)
+- [SpeedBreaker](https://github.com/SpeedBreakerProject/speedbreaker) by SpeedBreakerProject /
+  project(u), in [onenonlygit's Android fork](https://github.com/onenonlygit/speedbreaker-one)
+  (SpeedBreaker One) — the third engine, in [speedbreaker/](speedbreaker/) under its own
+  GPL-3.0, COPYING, NOTICE and LICENSES/. Its Mali-G1 fixes were made by a Codex session
+  directed by PredatorWoah
 - [StevensND/nfsmw-nx](https://github.com/StevensND/nfsmw-nx) — the Nintendo Switch port of this
   same project. The single-pass scene (`android/app/src/main/cpp/render_targets.cpp`) is ported
   from it, and its documentation on the game's renderer was a guide
