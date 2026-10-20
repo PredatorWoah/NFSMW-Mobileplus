@@ -33,7 +33,7 @@ import java.util.*;
  *                                driver) and a "diag" line every 5 s: thermal
  *                                status and headroom, battery temperature, free
  *                                RAM, RSS, display Hz and each core's MHz
- *   sb_<time>_<kind>_<log>       the native session log (files/data/logs, where
+ *   sb_<time>_<kind>_<log>       the native session log (files/data/speedbreaker/logs, where
  *                                stderr goes) and android-diagnostics.log,
  *                                copied every second as they grow
  *
@@ -162,14 +162,19 @@ final class DownloadsLog {
     }
 
     /**
-     * The native session log (<files>/data/logs/<stamp>.log, stderr goes there:
+     * The native session log (<files>/data/speedbreaker/logs/<stamp>.log, stderr goes there:
      * runtime/report/log.cpp) and the probe's android-diagnostics.log, from the
      * ones this session wrote: modified since it started.
      */
     private void copyNativeLogs() {
+        // <files>/data/speedbreaker/logs (user/paths.h: UserDataBase()/kUserFolderName),
+        // or data/nfsmw-recomp/logs where an old folder could not be renamed.
         List<File> files = new ArrayList<>();
-        File[] logs = new File(new File(ctx.getFilesDir(), "data"), "logs").listFiles((dir, name) -> name.endsWith(".log"));
-        if (logs != null) files.addAll(Arrays.asList(logs));
+        for (String user : new String[] {"speedbreaker", "nfsmw-recomp"}) {
+            File[] logs = new File(new File(new File(ctx.getFilesDir(), "data"), user), "logs")
+                    .listFiles((dir, name) -> name.endsWith(".log"));
+            if (logs != null) files.addAll(Arrays.asList(logs));
+        }
         files.add(new File(ctx.getFilesDir(), "android-diagnostics.log"));
         for (File f : files) {
             if (!f.isFile() || (!copies.containsKey(f) && f.lastModified() < started - 2000)) continue;

@@ -52,7 +52,7 @@ de flujo de control, los de predicados y los de BC.
   (`runtime/gpu/renderer.cpp`, `ObservedMaliG1Driver`).
 - **Registro en Descargas** (`DownloadsLog.java`, adaptado de `RegistroDescargas`): cada
   partida o sonda deja en `Download/SpeedBreaker-logs/` el logcat de la app, el registro nativo
-  de la sesión (`files/data/logs/<hora>.log`, que es adonde va su stderr) copiado según crece, y
+  de la sesión (`files/data/speedbreaker/logs/<hora>.log`, que es adonde va su stderr) copiado según crece, y
   una línea `diag` cada 5 s (estado y margen térmico, batería, RAM libre, RSS, Hz y MHz de cada
   núcleo). Al abrir el lanzador, si la partida anterior acabó mal, el motivo de Android, el
   logcat que quedaba y el tombstone. Puesto por defecto; el botón **Logs to Downloads** del
