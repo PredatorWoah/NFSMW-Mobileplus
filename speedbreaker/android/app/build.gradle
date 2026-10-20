@@ -1,0 +1,44 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.onenonlygit.speedbreakerone'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+    ndkVersion '28.2.13676358'
+    buildFeatures { buildConfig true }
+    defaultConfig {
+        applicationId 'com.onenonlygit.speedbreakerone'
+        minSdk 33
+        targetSdk 35
+        versionCode 12
+        versionName '0.1.11'
+        buildConfigField 'boolean', 'PLATFORM_PROBE', (project.findProperty('sbDiagnostics') == 'ON' ? 'true' : 'false')
+        ndk { abiFilters 'arm64-v8a' }
+        externalNativeBuild { cmake {
+            arguments '-DANDROID_STL=c++_shared', "-DSB_ANDROID_DIAGNOSTICS=${project.findProperty('sbDiagnostics') ?: 'OFF'}"
+            if (project.hasProperty('sbNativeJobs')) arguments "-DSB_ANDROID_BUILD_JOBS=${project.property('sbNativeJobs')}"
+        } }
+    }
+    signingConfigs {
+        personal {
+            if (System.getenv('SB_KEYSTORE')) {
+                storeFile file(System.getenv('SB_KEYSTORE'))
+                storePassword System.getenv('SB_STORE_PASSWORD')
+                keyAlias System.getenv('SB_KEY_ALIAS')
+                keyPassword System.getenv('SB_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release { debuggable (project.findProperty('sbDiagnostics') == 'ON' || project.findProperty('sbBringup') == 'ON'); if (System.getenv('SB_KEYSTORE')) signingConfig signingConfigs.personal; minifyEnabled false }
+        debug { if (System.getenv('SB_KEYSTORE')) signingConfig signingConfigs.personal; debuggable true }
+    }
+    packagingOptions { jniLibs { useLegacyPackaging true } }
+    sourceSets.main.java.srcDirs += '../../tools/SDL/android-project/app/src/main/java'
+    // Package a separately built full runtime without compiling it twice.
+    // Normal builds keep the managed CMake path. Never use compile fixtures.
+    if (project.findProperty('sbNativeDir')) {
+        sourceSets.main.jniLibs.srcDirs = [file(project.property('sbNativeDir'))]
+    } else {
+        externalNativeBuild { cmake { path '../CMakeLists.txt'; version (project.findProperty('sbCmakeVersion') ?: '3.22.1') } }
+    }
+}

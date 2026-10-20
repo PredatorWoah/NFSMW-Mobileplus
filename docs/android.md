@@ -62,7 +62,30 @@ edición. El APK que sale vale solo para esa edición. Ver [ediciones.md](edicio
 
 La primera compilación del APK tarda (el SDK entero y 133 ficheros generados).
 Los ficheros generados se compilan de 4 en 4 (`NFSMW_JOBS_RECOMP`): con 16 GB de
-RAM y 8 a la vez, clang se queda sin memoria.
+RAM y 8 a la vez, clang se queda sin memoria. Con 8 GB, de 2 en 2:
+`gradlew assembleRelease -Pnfsmw.trabajos=2`.
+
+### En un Mac (Apple Silicon) o en Linux
+
+Sin Visual Studio: el SDK ReXGlue compila en macOS y Linux, y los scripts no dependen de
+Windows. Probado en Linux hasta compilar el generador (`rexglue`, 862/862) con Clang 20;
+en un Mac, sin probar todavía. Hace falta **Clang 20 o más nuevo** en el PATH: con el 18
+de Ubuntu 24.04 falla `std::expected` (`rex/system/map_parser.h`). En Linux, además, las
+cabeceras de X11 y Wayland que pide SDL para el generador (`libx11-xcb-dev`,
+`libxcursor-dev`, `libwayland-dev`...).
+
+```bash
+xcode-select --install
+brew install llvm cmake ninja python node
+export PATH="$(brew --prefix llvm)/bin:$PATH"     # clang++ --version: 20 o mas
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+python3 tools/android/preparar_nativo.py --iso ~/ruta/PAL_ES.iso
+python3 tools/android/preparar_nativo.py --iso ~/ruta/USA.iso     # otra edicion, si hace falta
+cd android
+./gradlew assembleRelease -Pnfsmw.motor=nativo -Pnfsmw.edicion=usa -Pnfsmw.trabajos=2
+```
+
+NDK 28.2.13676358 y CMake 3.31.6, desde el SDK Manager de Android Studio, como en Windows.
 
 ## En el móvil
 
@@ -131,6 +154,24 @@ La proporción la pone la vista y el presentador llena el búfer entero, con
   ahora siempre lleva un tamaño exacto.
 
 El log lo confirma con `Superficie: vista WxH, bufer WxH`.
+
+### El registro en Descargas, para un móvil sin adb
+
+**Avanzado > Guardar el registro en Descargas** (`RegistroDescargas.java`). Con él puesto,
+cada partida y cada prueba de Vulkan deja en `Download/NFSMW-logs/`:
+
+| Fichero | Qué lleva |
+|---|---|
+| `nfsmw_<fecha>_<partida\|sonda>.txt` | Cabecera: móvil, SoC, Android, GPU (y si se tomó por débil), RAM, cada núcleo con `cpu_capacity`, frecuencia máxima, gobernador y modelo de Arm, modos de pantalla, ajustes y argumentos (la ISO no). Después, el logcat entero de la app mientras dura (el SDK, el driver de Vulkan, SDL, Java), con una línea `nfsmw-diag` cada 5 s: fps, ms, estado y margen térmico, batería y su temperatura, RAM libre, RSS, montón nativo y MHz de cada núcleo |
+| `..._juego.log` | El `log_file` del juego, copiado cada segundo según crece: el logcat puede perder líneas y en algunos móviles va capado |
+| `nfsmw_<fecha>_salida.txt` | Al volver a abrir la app, si la partida acabó mal: el motivo de Android (`ApplicationExitInfo`: fallo, fallo nativo, ANR, sin memoria...), la traza de un ANR y el logcat que quedaba |
+| `..._salida_tombstone.pb` | En un fallo nativo (Android 12+), el tombstone de debuggerd, en protobuf |
+| `nfsmw_<fecha>_sonda_vulkan.txt` | El informe de la sonda, cada vez que sale uno nuevo |
+
+Todo se escribe y se vacía según llega: lo escrito sobrevive a un fallo. Va por MediaStore,
+sin permisos; si el sistema no deja, a `Android/data/io.github.nfsmwrecomp/files/logs`. Sube el
+registro del juego a `debug`, que cuesta algo de fps: apagarlo para jugar. El APK de la CI
+(`.github/workflows/android-sonda.yml`) lo trae puesto (`-Pnfsmw.registroDescargas=true`).
 
 ### Banco de pruebas desde adb
 

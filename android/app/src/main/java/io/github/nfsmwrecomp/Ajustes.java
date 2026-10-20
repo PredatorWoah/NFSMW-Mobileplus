@@ -120,6 +120,27 @@ final class Ajustes {
     boolean registroDetallado() { return p.getBoolean("registro", false); }
     void registroDetallado(boolean v) { p.edit().putBoolean("registro", v).apply(); }
 
+    /**
+     * El registro en Descargas (RegistroDescargas): todo lo de cada partida y
+     * cada sonda en Download/NFSMW-logs, para mandarlo. Por defecto, lo que diga
+     * -Pnfsmw.registroDescargas=true al compilar.
+     */
+    boolean registroDescargas() { return p.getBoolean("registro_descargas", BuildConfig.REGISTRO_DESCARGAS); }
+    void registroDescargas(boolean v) { p.edit().putBoolean("registro_descargas", v).apply(); }
+
+    /**
+     * Si el juego escribe su registro: en depuracion, con -Pnfsmw.registro=true
+     * o con el registro en Descargas. Si no, ni fichero ni logcat (ver argumentos()).
+     */
+    boolean conRegistro() {
+        return BuildConfig.DEBUG || BuildConfig.REGISTRO || registroDescargas();
+    }
+
+    /** Para mandar el registro, todo: debug, aunque cueste fps. */
+    String nivelRegistro() {
+        return registroDetallado() || registroDescargas() ? "debug" : "info";
+    }
+
     // --- Rendimiento y graficos. Los valores por defecto son los del SDK: lo
     // que se toca aqui es para PROBAR que cuesta cada cosa en cada movil.
 
@@ -501,7 +522,7 @@ final class Ajustes {
         }
         a.add("--user_data_root=" + carpetaDatos(ctx).getAbsolutePath());
 
-        if (!BuildConfig.DEBUG) {
+        if (!conRegistro()) {
             // Release: sin registro, ni en fichero ni en logcat (el SDK copia
             // cada linea a logcat en Android, y con "off" no llega a ningun
             // sitio). /dev/null y no vacio: sin log_file el SDK se inventa una
@@ -516,7 +537,7 @@ final class Ajustes {
             // escriba una linea POR FOTOGRAMA en almacenamiento compartido (FUSE)
             // y hunde los fps. Con info son unas pocas lineas por partida, y ahi
             // va el contador de fps de parche_fps.py.
-            a.add("--log_level=" + (registroDetallado() ? "debug" : "info"));
+            a.add("--log_level=" + nivelRegistro());
             // Sin esto el fichero se vuelca a bloques de 4 KB: con solo una
             // linea de fps cada 5 s, lo que se lee con adb va minutos por
             // detras (y lo que haya en el bufer se pierde si el proceso muere).

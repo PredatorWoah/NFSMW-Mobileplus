@@ -177,6 +177,8 @@
     <string name="paginas_resumen">Memory coherence. May cost performance.</string>
     <string name="registro_detallado">Detailed log</string>
     <string name="registro_detallado_resumen">log_level=debug. It tanks the fps: only for diagnosing problems.</string>
+    <string name="registro_descargas">Save logs to Downloads</string>
+    <string name="registro_descargas_resumen">Everything from each game and Vulkan test goes to Download/NFSMW-logs, to share when something fails: device, settings, the full log, fps and temperature every 5 s, and why the game closed if it crashed. Logs at debug level: costs some fps.</string>
     <string name="probar_vulkan">Test Vulkan</string>
     <string name="probar_vulkan_resumen">Loads the GPU driver and checks what it supports, without the game.</string>
     <string name="sin_informe">No probe report yet. Tap “Test Vulkan”.</string>

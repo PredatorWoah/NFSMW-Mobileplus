@@ -79,7 +79,15 @@ final class Gpu {
         java.util.regex.Matcher mali = java.util.regex.Pattern
                 .compile("Mali-?G(\\d+)").matcher(n);
         if (mali.find()) {
-            return Integer.parseInt(mali.group(1)) <= 68;
+            // Desde 2025 Arm las nombra con una sola cifra y un escalon:
+            // "Mali-G1-Ultra" (Dimensity 9500), "Mali-G1-Premium", "Mali-G1-Pro".
+            // Son las mas nuevas; leidas como numero, el 1 caia en "debil" y un
+            // movil de gama alta arrancaba con los ajustes de un Snapdragon 650.
+            String modelo = mali.group(1);
+            if (modelo.length() == 1) {
+                return false;
+            }
+            return Integer.parseInt(modelo) <= 68;
         }
         String m = n.toLowerCase(java.util.Locale.ROOT);
         return m.contains("mali-t") || m.contains("powervr");

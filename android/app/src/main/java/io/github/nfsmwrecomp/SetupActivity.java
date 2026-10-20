@@ -89,6 +89,10 @@ public class SetupActivity extends AppCompatActivity {
         avanzadoAbierto = savedInstanceState != null
                 && savedInstanceState.getBoolean(ESTADO_AVANZADO, false);
         setContentView(construir());
+        // Registro en Descargas: si la partida anterior acabo mal, por que. En
+        // otro hilo: lee el logcat que quede.
+        final Context app = getApplicationContext();
+        new Thread(() -> RegistroDescargas.informeSalidas(app), "salidas").start();
         // Una ISO elegida con una version anterior de la app: aun sin mirar.
         mirarIso();
         bancoDePruebas(getIntent());
@@ -466,6 +470,8 @@ public class SetupActivity extends AppCompatActivity {
         avanzado.addView(soloXenos(interruptor(R.string.exposicion, R.string.exposicion_resumen, ajustes.exposicionFiel(), ajustes::exposicionFiel)));
         avanzado.addView(soloXenos(interruptor(R.string.memexport, R.string.memexport_resumen, ajustes.lecturaMemexport(), ajustes::lecturaMemexport)));
         avanzado.addView(soloXenos(interruptor(R.string.paginas, R.string.paginas_resumen, ajustes.refrescarPaginas(), ajustes::refrescarPaginas)));
+        // Todo lo de cada partida en Download/NFSMW-logs, para mandarlo (RegistroDescargas).
+        avanzado.addView(interruptor(R.string.registro_descargas, R.string.registro_descargas_resumen, ajustes.registroDescargas(), ajustes::registroDescargas));
         // En release no hay registro: el interruptor no haria nada.
         if (BuildConfig.DEBUG) {
             avanzado.addView(interruptor(R.string.registro_detallado, R.string.registro_detallado_resumen, ajustes.registroDetallado(), ajustes::registroDetallado));
@@ -978,6 +984,7 @@ public class SetupActivity extends AppCompatActivity {
         actualizarTurbo();
 
         File informe = Ajustes.informeSonda(this);
+        RegistroDescargas.copiarInformeSonda(this);
         if (informe.isFile()) {
             try {
                 textoInforme.setText(new String(Files.readAllBytes(informe.toPath()),

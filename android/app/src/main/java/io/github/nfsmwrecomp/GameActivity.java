@@ -16,9 +16,13 @@ import android.os.VibratorManager;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
+import android.view.Display;
 import android.view.MotionEvent;
+import android.view.Surface;
+import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -68,6 +72,15 @@ public class GameActivity extends SDLActivity {
     /** Milisegundos por fotograma, media del ultimo medio segundo. */
     private static native float nativeMsPorFotograma();
 
+    /** {fps, ms} para el registro en Descargas, o null si el plugin no ha cargado. */
+    private static float[] medidas() {
+        try {
+            return new float[] {nativeFps(), nativeMsPorFotograma()};
+        } catch (UnsatisfiedLinkError e) {
+            return null;
+        }
+    }
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(Idioma.envolver(base));
@@ -114,10 +127,18 @@ public class GameActivity extends SDLActivity {
         argumentos = lista.toArray(new String[0]);
         // Release: sin registro (ver Ajustes.argumentos).
         if (BuildConfig.DEBUG) Log.i(TAG, "Argumentos: " + String.join(" ", argumentos));
+        // El registro en Descargas, si esta puesto: antes de cargar las
+        // librerias, para que salga tambien lo que pase al cargarlas.
+        RegistroDescargas.arrancar(this, lista.contains("--nfsmw_sonda") ? "sonda" : "partida",
+                argumentos, GameActivity::medidas);
         super.onCreate(savedInstanceState);
 
         ajustarSuperficie(intent.getStringExtra(EXTRA_RESOLUCION),
                 intent.getBooleanExtra(EXTRA_ESTIRAR, false));
+        if (!lista.contains("--nfsmw_sonda")) {
+            // El tope de fps: el del motor nativo, o los 60 del juego con el de Xenos.
+            ajustarFrecuencia(MotorNativo.ACTIVO ? new Ajustes(this).limiteFps() : 60);
+        }
         if (intent.getBooleanExtra(EXTRA_MOSTRAR_FPS, true)) {
             ponerContadorFps();
         }
@@ -247,6 +268,87 @@ public class GameActivity extends SDLActivity {
         });
     }
 
+    /**
+     * La frecuencia de la pantalla, a juego con el tope de fps (tope <= 0: sin
+     * limite).
+     *
+     * Si la pantalla no va a un multiplo exacto de los fps, cada fotograma dura
+     * en pantalla un numero distinto de refrescos y el movimiento tiembla aunque
+     * los fps esten clavados: 60 fps en una pantalla a 90 Hz son fotogramas de
+     * 2 y 1 refrescos alternos. Los moviles de 120 Hz suelen arrancar en 90 por
+     * ahorro de bateria (un vivo con Dimensity 9500, por ejemplo).
+     *
+     * Se elige el modo de la misma resolucion con el multiplo mas bajo desde 60
+     * Hz (30 fps -> 60 Hz, 60 -> 60, 90 -> 90, 120 -> 120; sin limite, el mas
+     * alto), se pide para la ventana (preferredDisplayModeId) y se le dice al
+     * sistema a cuantos fps va el contenido (Surface.setFrameRate), para que
+     * no lo cambie el por su cuenta. Si no hay multiplo, el mas alto.
+     */
+    private void ajustarFrecuencia(int tope) {
+        Display pantalla = android.os.Build.VERSION.SDK_INT >= 30
+                ? getDisplay() : getWindowManager().getDefaultDisplay();
+        if (pantalla == null || mSurface == null) {
+            return;
+        }
+        Display.Mode actual = pantalla.getMode();
+        Display.Mode multiplo = null;
+        Display.Mode mayor = null;
+        for (Display.Mode m : pantalla.getSupportedModes()) {
+            if (m.getPhysicalWidth() != actual.getPhysicalWidth()
+                    || m.getPhysicalHeight() != actual.getPhysicalHeight()) {
+                continue;
+            }
+            float hz = m.getRefreshRate();
+            if (mayor == null || hz > mayor.getRefreshRate()) {
+                mayor = m;
+            }
+            if (tope > 0 && hz >= Math.max(60, tope)) {
+                float veces = hz / tope;
+                boolean exacto = Math.abs(veces - Math.round(veces)) < 0.02f;
+                if (exacto && (multiplo == null || hz < multiplo.getRefreshRate())) {
+                    multiplo = m;
+                }
+            }
+        }
+        Display.Mode elegido = multiplo != null ? multiplo : mayor;
+        if (elegido == null) {
+            return;
+        }
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.preferredDisplayModeId = elegido.getModeId();
+        getWindow().setAttributes(lp);
+
+        final float contenido = tope > 0 ? tope : elegido.getRefreshRate();
+        Log.i(TAG, String.format(Locale.ROOT,
+                "Pantalla: tope %s -> %dx%d@%.0f Hz (estaba a %.0f Hz)",
+                tope > 0 ? tope + " fps" : "sin limite", elegido.getPhysicalWidth(),
+                elegido.getPhysicalHeight(), elegido.getRefreshRate(), actual.getRefreshRate()));
+        if (android.os.Build.VERSION.SDK_INT < 30) {
+            return;
+        }
+        // Cada superficie que cree SDL (tambien al volver de segundo plano).
+        mSurface.getHolder().addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder h) {
+                try {
+                    h.getSurface().setFrameRate(contenido, tope > 0
+                            ? Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE
+                            : Surface.FRAME_RATE_COMPATIBILITY_DEFAULT);
+                } catch (IllegalArgumentException | IllegalStateException e) {
+                    Log.w(TAG, "setFrameRate: " + e);
+                }
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder h, int formato, int ancho, int alto) {
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder h) {
+            }
+        });
+    }
+
     /** Un rotulo en la esquina con los fps del juego, cada medio segundo. */
     private void ponerContadorFps() {
         if (mLayout == null) {
@@ -299,6 +401,7 @@ public class GameActivity extends SDLActivity {
         if (touchController != null) touchController.disconnect();
         reloj.removeCallbacksAndMessages(null);
         super.onDestroy();
+        RegistroDescargas.parar();
         // Proceso propio: al cerrar la partida, fuera. Asi la siguiente arranca
         // con las librerias nativas sin cargar.
         android.os.Process.killProcess(android.os.Process.myPid());

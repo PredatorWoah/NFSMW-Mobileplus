@@ -235,12 +235,12 @@ final class MotorNativo {
         if (Ajustes.gamertagValido(gamertag) && !gamertag.isEmpty()) {
             a.add("--user_gamertag=" + gamertag);
         }
-        if (!BuildConfig.DEBUG && !BuildConfig.REGISTRO) {
+        if (!ajustes.conRegistro()) {
             a.add("--log_file=/dev/null");
             a.add("--log_level=off");
         } else {
             a.add("--log_file=" + new File(Ajustes.carpetaLogs(ctx), "nfsmw.log").getAbsolutePath());
-            a.add("--log_level=" + (ajustes.registroDetallado() ? "debug" : "info"));
+            a.add("--log_level=" + ajustes.nivelRegistro());
             a.add("--log_flush_interval=2");
         }
         // El driver de GPU (Turnip) y la sonda, como con el motor de Xenos.

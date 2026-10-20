@@ -10,6 +10,43 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **Un tercer motor, SpeedBreaker, para Mali** ([speedbreaker/](speedbreaker/), ver
+  [docs/speedbreaker.md](docs/speedbreaker.md)): otra recompilación del juego, con su propio
+  runtime y su propia emulación de la GPU, en el fork Android de onenonlygit, traída de
+  [PredatorWoah/speedbreaker-mali](https://github.com/PredatorWoah/speedbreaker-mali)
+  (`android/rp6-bringup`, `3fd1250`) con las 8 correcciones de una sesión de Codex en un Vivo
+  X300 Pro (Dimensity 9500, Mali-G1-Ultra, Android 17): el cuelgue de minutos del compilador
+  de shaders de Mali al cargar la partida guardada (flujo de control solo hacia delante, de
+  >20 s a 0,06 s), las rayas y bloques verdes de vídeos y menús (memoria del juego por copia
+  en ese driver), las texturas BC descomprimidas en la GPU, el mando táctil con su editor y el
+  lanzador en apaisado. Se compila solo con el disco USA y corre en ese móvil a ~45–60 fps
+  según el usuario; el motor de Xenos no puede en Mali (le falta
+  `vertexPipelineStoresAndAtomics`). Fuera se quedaron sus APK con el juego dentro. Encima:
+  los arreglos de Mali se activan para toda la familia Mali-G1 y no solo con un driver exacto
+  (una actualización del sistema los apagaba en silencio), registro en
+  `Download/SpeedBreaker-logs/` y la pantalla a 60 Hz al jugar. CI:
+  `.github/workflows/speedbreaker-sonda.yml`, su sonda sin juego.
+
+- La pantalla, a juego con el tope de fps (`GameActivity.ajustarFrecuencia`): al empezar la
+  partida se pide el modo de la misma resolución con el múltiplo más bajo desde 60 Hz (30 y
+  60 fps a 60 Hz, 90 a 90, 120 y sin límite a 120 en un panel de 120) y se le dice al sistema
+  a cuántos fps va el contenido (`Surface.setFrameRate`). 60 fps en una pantalla a 90 Hz,
+  como deja de fábrica un vivo con Dimensity 9500, alternan fotogramas de 2 y 1 refrescos y
+  tiemblan aunque los fps estén clavados. Con el motor de Xenos, 60. La línea `diag` del
+  registro en Descargas lleva los Hz.
+
+- Registro en Descargas (Avanzado > Guardar el registro en Descargas): cada partida y cada
+  prueba de Vulkan deja en `Download/NFSMW-logs/` la cabecera del móvil (SoC, núcleos con su
+  `cpu_capacity`, GPU, pantalla, ajustes y argumentos), el logcat entero de la app, el
+  registro del juego copiado según crece y, cada 5 s, una línea `diag` con fps, estado
+  térmico, temperatura de la batería, memoria y frecuencia de cada núcleo. Al abrir la app,
+  si la partida anterior acabó mal, `..._salida.txt` con el motivo de Android
+  (`ApplicationExitInfo`), el logcat que quedaba y, en un fallo nativo, el tombstone. Todo
+  se vacía según llega, así que sobrevive a un fallo. Sube el registro a `debug`: cuesta algo
+  de fps. `RegistroDescargas.java`; de fábrica con `-Pnfsmw.registroDescargas=true`.
+- CI (`.github/workflows/android-sonda.yml`): el APK de la sonda, sin el juego, con el
+  registro en Descargas puesto. Se niega a compilar si encuentra código o datos del juego.
+
 - Las demás ediciones que soporta nfsmw-nx, con el motor nativo: PAL Alemania, Italia,
   Francia y Reino Unido, la traducción polaca de fans, Corea y Asia (chino tradicional).
   Se reconocen por el SHA-256 de su `default.xex` (los del instalador de nfsmw-nx) y llevan
@@ -463,6 +500,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
   fotogramas, para siempre.
 
 ### Arreglado
+
+- Los Mali con el nombre nuevo de Arm (`Mali-G1-Ultra` del Dimensity 9500, `-Premium`,
+  `-Pro`) se tomaban por GPU débiles: el número tras la G se leía como 1, por debajo de 68, y
+  un móvil de gama alta arrancaba con 1024x576 y 30 fps. La sonda los llamaba Valhall.
+- `android/gradlew` no era ejecutable en git: en Linux y en la CI, `./gradlew` fallaba con
+  `Permission denied`.
 
 - Las estelas de luz de los pilotos con el nitro salían la mitad de largas que en la Xbox 360
   a 60 fps: el juego las dibuja entre las 3 últimas posiciones del coche, una por fotograma, y

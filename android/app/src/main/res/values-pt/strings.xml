@@ -159,6 +159,8 @@
     <string name="paginas_resumen">Coerência de memória. Pode custar desempenho.</string>
     <string name="registro_detallado">Registro detalhado</string>
     <string name="registro_detallado_resumen">log_level=debug. Derruba os fps: só para diagnosticar problemas.</string>
+    <string name="registro_descargas">Salvar o registro em Downloads</string>
+    <string name="registro_descargas_resumen">Tudo de cada partida e de cada teste de Vulkan vai para Download/NFSMW-logs, para enviar se algo falhar: o celular, os ajustes, o registro inteiro, fps e temperatura a cada 5 s, e por que o jogo fechou se falhou. Registra com nível debug: custa um pouco de fps.</string>
     <string name="probar_vulkan">Testar Vulkan</string>
     <string name="probar_vulkan_resumen">Carrega o driver da GPU e verifica o que ele suporta, sem o jogo.</string>
     <string name="sin_informe">Ainda não há relatório da sonda. Toque em “Testar Vulkan”.</string>
