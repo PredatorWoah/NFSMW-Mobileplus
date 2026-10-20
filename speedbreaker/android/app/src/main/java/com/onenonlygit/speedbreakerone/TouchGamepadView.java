@@ -16,6 +16,8 @@ import java.util.ArrayList;
 final class TouchGamepadView extends View {
     private static native void nativeState(int buttons, float lx, float ly, float rx, float ry, float lt, float rt);
     private static native boolean nativeVisible();
+    /** Drives the virtual pad directly: CheatsMenu types the title-screen codes with it. */
+    static void inject(int buttons, float lt, float rt) { nativeState(buttons,0,0,0,0,lt,rt); }
     private static final int BACK=1<<4, START=1<<6;
     private static final int BUTTON=0, BRAKE=2, GAS=3, STEER_LEFT=4, STEER_RIGHT=5;
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);

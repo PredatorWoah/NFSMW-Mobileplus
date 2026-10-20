@@ -28,6 +28,7 @@
 #include <report/report.h>
 #include <ui/installer_screen.h>
 #include <ui/ui.h>
+#include <game/cheats.h>
 #include <user/paths.h>
 #include <user/settings.h>
 #include <user/version_check.h>
@@ -551,6 +552,9 @@ int main(int argc, char** argv)
     }
     memcpy(g_memory.Translate(image.base), image.data.get(), image.size);
     fprintf(stderr, "[loader] image %08zX-%08zX, entry %08zX\n", image.base, image.base + image.size, image.entry_point);
+    // The CHEATS menu's data patches, onto the image before any guest code
+    // runs (game/cheats.h).
+    cheats::ApplyStartup();
 
     // Which game files this is, then the whole system summary for the log.
     {
