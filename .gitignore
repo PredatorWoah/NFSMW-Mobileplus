@@ -9,6 +9,11 @@
 
 # --- Ficheros del juego ------------------------------------------------------
 assets/
+# Salvo los de speedbreaker/ que ya versiona su proyecto: sus banners y capturas,
+# y los textos de licencia que el APK tiene que llevar. Su propio .gitignore
+# (speedbreaker/.gitignore) sigue apartando el juego.
+!speedbreaker/assets/
+!speedbreaker/android/app/src/main/assets/
 *.xex
 *.xexp
 *.iso
