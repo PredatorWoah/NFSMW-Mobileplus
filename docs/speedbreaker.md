@@ -61,6 +61,54 @@ de flujo de control, los de predicados y los de BC.
   ese Vivo, ninguno divide el refresco y la imagen tiembla con los fps clavados. Se pide el modo
   de 60 Hz (o el múltiplo de 60 más bajo) y `Surface.setFrameRate(60)`.
 
+## Trucos (menú CHEATS)
+
+Botón **CHEATS** arriba a la derecha en la partida (`CheatsMenu.java`). Solo ofrece lo que tiene
+una fuente; nada de interruptores que no hagan nada.
+
+| Truco | Cómo | Estado |
+|---|---|---|
+| Junkman (One Stop Shop) | Código de la pantalla de título, ↑ ↑ ↓ ↓ ← → ↑ ↓, tecleado por el mando virtual | Código publicado; sin probar aquí |
+| Desafío Burger King | ↑ ↓ ↑ ↓ ← → ← → | Ídem |
+| Ford GT de Castrol | ← → ← → ↑ ↓ ↑ ↓ | Ídem. Una lista lo intercambia con el de Burger King |
+| Porsche Cayman | L R R R → ← → ↓ | Ídem. «L/R» son gatillos en unas listas y botones superiores en otras: se mandan los dos |
+| Black Edition | Parche de datos `0x82A2CE04 = 0x100` al arrancar (`runtime/game/cheats.cpp`), el de Xenia para el título 454107D9, que lista el XEX USA | Experimental. Solo escribe si encuentra 0 (o ya 0x100); si no, lo dice en el log |
+| Dinero (y recompensa) | Buscador de números (`runtime/platform/android/cheat_finder.cpp`): buscar lo que muestra el juego, cambiarlo jugando, volver a buscar, fijar | Probado con memoria simulada; sin probar en el móvil |
+
+Los códigos se introducen en la pantalla de título («Press Start»), como en una 360, y quedan en
+el perfil. Los de arranque se guardan en `files/data/speedbreaker/cheats.txt` («id=1» por
+línea) y se aplican con **Save & Restart**, que reinicia el proceso del juego desde el lanzador.
+
+**Por qué solo datos.** El código del juego está recompilado de antemano: escribir instrucciones
+PowerPC en la memoria no cambia nada (lo que sí hace un parche de Xenia en el emulador). Un truco
+de código necesita un gancho (`config/nfsmw.toml`); uno de datos, una escritura antes del punto
+de entrada, donde Xenia aplica los suyos.
+
+### Los que faltan, y cómo encontrarlos
+
+**Nitro y SpeedBreaker infinitos.** En PC son interruptores de depuración que quedaron en el
+juego publicado: `Tweak_InfiniteNOS` y `Tweak_InfiniteRaceBreaker`, dos `bool` a 0; ponerlos a 1
+es todo el truco ([s-b-repo/nfsmw-2005-re](https://github.com/s-b-repo/nfsmw-2005-re),
+`docs/MOD_RECIPES.md`). La 360 sale del mismo código, así que los dos existirán en sus datos;
+falta su dirección en el XEX USA, que no lleva nombres. Con tu `default.xex` (en el Mac):
+
+1. En el código generado (`ppc/`), la función que muestrea el medidor de nitro lee un byte
+   global (`lbz` de una dirección de `.data`/`.bss`), lo compara con 0 y, si no es 0, se salta
+   la resta del depósito. En PC, `Tweak_InfiniteNOS` lo lee solo esa función. Buscar en `ppc/`
+   las lecturas de un byte global justo antes de una rama que se salta una resta en coma
+   flotante sobre un campo del coche, y quedarse con las candidatas.
+2. Probar cada candidata con una línea en `kCheats` de `runtime/game/cheats.cpp` (dato 0 → 1):
+   el medidor deja de bajar o no.
+3. Igual con el SpeedBreaker, cuyo medidor se muestrea al lado.
+
+**Todos los coches.** En PC, `AwardBonusCars(fePlayerCarDB)` y `AwardRivalCar(..., clave)` tras
+cargar la partida. En la 360 hace falta la dirección de esas funciones y un gancho que las
+llame: con el `ppc/` delante, por la cadena de los nombres de coche (`"CORVETTEC6"` →
+`StringToKey`).
+
+**Oros en los desafíos.** Están en el perfil guardado; sin estructura conocida del de la 360.
+El buscador no sirve (no hay un número a la vista que buscar).
+
 ## Compilar
 
 Lo de su entrega, resumido; el detalle está en
@@ -93,7 +141,7 @@ en el repositorio).
 
 - **Coches demasiado brillantes.** Su muestreo de texturas no usa los campos de signo, gamma y
   exponente de la Xenos; que sea eso en los coches no está comprobado. No atenuar a ojo.
-- **Trucos** (nitro infinito, todos los coches...): investigados, sin hacer.
+- **Trucos que faltan**: nitro y SpeedBreaker infinitos, todos los coches y oros (ver «Los que faltan»).
 - Sin comprobar todavía: una carrera completa y otra seguida, el modo carrera, volver de
   segundo plano, los dos lados en apaisado, y temperatura y memoria a lo largo de varias
   carreras.

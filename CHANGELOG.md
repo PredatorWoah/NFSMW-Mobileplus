@@ -10,6 +10,14 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **Menú CHEATS en SpeedBreaker** (`speedbreaker/`, ver [docs/speedbreaker.md](docs/speedbreaker.md#trucos-menú-cheats)):
+  los cuatro códigos de la pantalla de título de la 360 (Junkman, Burger King, Ford GT de
+  Castrol, Porsche Cayman) tecleados por el mando virtual; Black Edition como parche de datos al
+  arrancar, el de Xenia para el XEX USA, que solo escribe si encuentra el valor esperado; y un
+  buscador para fijar el dinero (o la recompensa). Nitro y SpeedBreaker infinitos, todos los
+  coches y oros esperan a que se encuentren sus direcciones en el XEX de la 360; el documento
+  dice cómo. Sin probar en el móvil.
+
 - **Un tercer motor, SpeedBreaker, para Mali** ([speedbreaker/](speedbreaker/), ver
   [docs/speedbreaker.md](docs/speedbreaker.md)): otra recompilación del juego, con su propio
   runtime y su propia emulación de la GPU, en el fork Android de onenonlygit, traída de
@@ -500,6 +508,9 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
   fotogramas, para siempre.
 
 ### Arreglado
+
+- SpeedBreaker: el registro en Descargas buscaba el log nativo de la sesión en
+  `files/data/logs`; está en `files/data/speedbreaker/logs`, y no se copiaba.
 
 - Los Mali con el nombre nuevo de Arm (`Mali-G1-Ultra` del Dimensity 9500, `-Premium`,
   `-Pro`) se tomaban por GPU débiles: el número tras la G se leía como 1, por debajo de 68, y
