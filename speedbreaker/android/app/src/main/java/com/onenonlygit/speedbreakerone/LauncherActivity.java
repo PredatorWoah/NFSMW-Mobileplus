@@ -94,8 +94,10 @@ public final class LauncherActivity extends Activity {
         return 0;
     }
     private void refresh() {
-        status.setText("Selected driver: " + prefs.getString("name", "System") + (importing ? "\nImporting…" : ""));
-        play.setText(gamePid() == 0 ? "Play" : "Resume game"); play.setEnabled(!importing);
+        // A test APK (-PsbDiagnostics=ON) has no game in it: say so, and what its button really does.
+        status.setText((BuildConfig.PLATFORM_PROBE ? "Test build: no game inside. It checks this phone and lets you edit the touch controls.\n" : "")
+                + "Selected driver: " + prefs.getString("name", "System") + (importing ? "\nImporting…" : ""));
+        play.setText(BuildConfig.PLATFORM_PROBE ? "Run phone test" : gamePid() == 0 ? "Play" : "Resume game"); play.setEnabled(!importing);
     }
     private void play(boolean restart) {
         if (importing) return;
