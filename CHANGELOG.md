@@ -10,6 +10,14 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: dos disposiciones táctiles e icono** (ver
+  [docs/speedbreaker.md](docs/speedbreaker.md#controles-táctiles)). RACING, rotulada por lo que
+  hace: GAS (RT), BRAKE (LT), ◀ ▶ para girar, NITRO (B), HANDBRAKE (A), LOOK BACK (Y), SLOW
+  TIME (X), pausa y ▲ ▼ para los menús. XBOX, el mando tal cual con los dos sticks analógicos.
+  Se cambia de una a otra desde la barra de arriba en cualquier momento, y cada una se edita y se
+  guarda por separado, también desde el lanzador sin el juego (**Edit touch controls**). Icono
+  adaptativo propio. El APK de pruebas de la CI se instala al lado del juego (paquete `.test`).
+
 - **Menú CHEATS en SpeedBreaker** (`speedbreaker/`, ver [docs/speedbreaker.md](docs/speedbreaker.md#trucos-menú-cheats)):
   los cuatro códigos de la pantalla de título de la 360 (Junkman, Burger King, Ford GT de
   Castrol, Porsche Cayman) tecleados por el mando virtual; Black Edition como parche de datos al
