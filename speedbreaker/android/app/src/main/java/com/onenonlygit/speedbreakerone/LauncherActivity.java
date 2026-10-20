@@ -20,6 +20,8 @@ import java.util.zip.*;
 /** The selector stays outside the Vulkan process, including after a driver crash. */
 public final class LauncherActivity extends Activity {
     private static final int IMPORT = 7312;
+    /** From the game's CHEATS menu: restart the game process with the saved choices. */
+    static final String EXTRA_RESTART = "restart_game";
     private SharedPreferences prefs;
     private TextView status;
     private Button play;
@@ -68,6 +70,13 @@ public final class LauncherActivity extends Activity {
         // Why the last game process ended, if it ended badly (DownloadsLog). Reads logcat: off the UI thread.
         android.content.Context app = getApplicationContext();
         new Thread(() -> DownloadsLog.reportExits(app), "exit-report").start();
+        restartIfAsked(getIntent());
+    }
+    @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); restartIfAsked(intent); }
+    private void restartIfAsked(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_RESTART, false)) return;
+        intent.removeExtra(EXTRA_RESTART);  // not again on rotation or recreation
+        play(true);
     }
     private void logsLabel(Button b) {
         b.setText(DownloadsLog.enabled(this) ? "Logs to Downloads: ON (SpeedBreaker-logs)" : "Logs to Downloads: OFF");
