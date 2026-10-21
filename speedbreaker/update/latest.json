@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 18,
-  "versionName": "0.1.17",
-  "notes": "A new black and gold launcher: your disc's own Most Wanted icon and title, a big RACE button, a Garage for settings, Add to home screen with the disc's icon, gamepad navigation, and a gold app icon.",
+  "versionCode": 19,
+  "versionName": "0.1.18",
+  "notes": "The app icon is now Need for Speed: Most Wanted's own dashboard icon, taken from your disc. Plus everything from 0.1.17: the black and gold launcher, Garage and home-screen shortcut.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
