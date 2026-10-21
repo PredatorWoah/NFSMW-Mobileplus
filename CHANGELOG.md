@@ -29,6 +29,9 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
   crítica del pool antes de cada búsqueda: devuelve el rover al inicio si se salió, y responde
   "no encontrado" si la cadena está rota en vez de no volver nunca. Cada problema va al registro
   (`[pool-guard]`). `NFSMW_POOL_GUARD=0` lo apaga.
+- **SpeedBreaker: el objetivo de las Power Hints sigue al ajuste Frame Rate** (0.1.14), no a los
+  swaps medidos: las cargas y los tirones lo llevaban a 30 fps con el juego a 60, y Android
+  bajaba la CPU justo cuando los fotogramas llegaban tarde.
 
 ### Añadido
 

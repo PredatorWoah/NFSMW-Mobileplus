@@ -1,10 +1,10 @@
 // SpeedBreaker One. GPL-3.0-or-later.
 #include "../perf_hint.h"
 #include "../../user/settings.h"
+#include "../../video/frame_rate.h"
 #include <dlfcn.h>
 #include <unistd.h>
 #include <algorithm>
-#include <chrono>
 #include <type_traits>
 #include <cstdio>
 #include <mutex>
@@ -56,13 +56,7 @@ namespace perfhint
         // The command processor's alone (FrameDone).
         Session* s_session = nullptr;
         bool s_unavailable = false;  // no manager or session: don't try every frame
-        int64_t s_target = 0, s_lastSwap = 0;
-        double s_interval = 0;  // swap interval, smoothed (ns)
-
-        int64_t Now()
-        {
-            return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-        }
+        int64_t s_target = 0;
     }
 
     void AddThisThread(const char* who)
@@ -76,8 +70,6 @@ namespace perfhint
     void FrameDone(uint64_t busyNs)
     {
         const Api& api = Load();
-        int64_t now = Now(), since = s_lastSwap ? now - s_lastSwap : 0;
-        s_lastSwap = now;
         if (!settings::GetBool(settings::Id::PowerHints))
         {
             if (s_session)
@@ -89,12 +81,13 @@ namespace perfhint
             s_unavailable = false;  // on again: try again
             return;
         }
-        // The frame period from the swaps (60 fps, or 30 with Frame Rate at
-        // 30), past a pause; the target leaves a fifth of it for the waits on
-        // the GPU and the display, so the hints never cost a frame.
-        if (since > 0 && since < 200'000'000)
-            s_interval = s_interval ? s_interval * 0.95 + double(since) * 0.05 : double(since);
-        int64_t period = s_interval > 25e6 ? 33'333'333 : 16'666'667;
+        // The frame period the game is paced to (Frame Rate: 60, 30, or what
+        // Auto chose), not the measured swaps: those stretch in loads and
+        // hitches, and a 30 fps target while the game runs at 60 told the
+        // system to slow down exactly when it was late (a 0.1.12 session
+        // flipped to 26.7 ms every minute or two). The target leaves a fifth
+        // of the period for the waits on the GPU and the display.
+        int64_t period = video::FrameRate() == 30 ? 33'333'333 : 16'666'667;
         int64_t target = period * 4 / 5;
         if (!s_session)
         {
