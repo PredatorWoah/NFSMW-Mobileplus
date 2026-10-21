@@ -8,6 +8,7 @@
 #include <kernel/function.h>
 #include <kernel/vmem.h>
 #include <report/report.h>
+#include <game/cheats.h>
 #include "command_processor.h"
 
 void VdQueryVideoMode(XVIDEO_MODE* mode)
@@ -117,6 +118,8 @@ void VdSwap(be<uint32_t>* buffer, be<uint32_t>* fetch, void* unk2, void* unk3, v
     // NFSMW_TEST_CRASH: a crash with the game's render loop on the stack.
     if (report::g_testCrash.load(std::memory_order_relaxed)) [[unlikely]]
         report::TestCrash();
+    // On the game's own render thread, once a frame: CHEATS' unlimited money.
+    game::cheats::OnFrame();
     // The front buffer's texture fetch constant (6 dwords), with its base
     // address rewritten to a physical page number.
     uint32_t words[6];

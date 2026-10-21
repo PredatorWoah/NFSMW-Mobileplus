@@ -17,4 +17,6 @@ inline bool BlackEditionFlag(bool supportedUsa,uint32_t original,uint32_t& repla
     replacement=0x100;return true;
 }
 void Initialize(bool supportedUsa);
+// The game's render thread, each frame (VdSwap): unlimited money's top-up.
+void OnFrame();
 }

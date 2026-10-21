@@ -116,6 +116,18 @@ final class CheatsMenu {
             boxes.add(box);list.addView(box);
         }
         list.addView(note("The USA game's own debug flags: an active meter keeps its charge instead of draining. It must have charge to start, and a car without NOS gets none. Apply with Save & Restart; turn off and restart to drain normally again."));
+        list.addView(heading("Career"));
+        for (String[] m : new String[][] {
+                {"unlimited_money", "Unlimited money", "Your cash is topped back up to $100,000,000 every frame while the game runs (more is kept). Buy anything; the game saves the balance as usual."},
+                {"unlock_all_cars", "Unlock all cars", "Every car in the game's lists answers \"unlocked\", bonus cars included, and the game's own unlock-all flag is set. Dealer stock and prices stay the game's."},
+                {"challenge_stars", "Challenge Series: all completed", "The Challenge Series screen shows every event completed, and the series reward check passes. No event record is rewritten; once the game grants the reward, it keeps it."}}) {
+            CheckBox box=new CheckBox(activity);
+            box.setText(m[1]);
+            box.setTag(m[0]);
+            box.setChecked(startup.contains(m[0]));
+            boxes.add(box);list.addView(box);
+            list.addView(note(m[2]));
+        }
         Button selected = new Button(activity);
         selected.setText("Enter selected at title screen");
         selected.setOnClickListener(v -> {
@@ -139,7 +151,7 @@ final class CheatsMenu {
         list.addView(restart);
 
         list.addView(heading("Not available yet"));
-        list.addView(note("Unlimited nitro, unlimited SpeedBreaker, unlimited spending, all cars and gold medals still need verified USA game hooks. The reference money scanner is withheld until it can identify the money field safely; matching a number alone is insufficient."));
+        list.addView(note("Every cheat checks the USA game's code first and stays off on any other executable (the session log says which are active). Apply with Save & Restart."));
 
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(list);
