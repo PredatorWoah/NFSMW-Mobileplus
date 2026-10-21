@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 12,
-  "versionName": "0.1.11",
-  "notes": "No newer build published yet.",
-  "url": "https://github.com/PredatorWoah/speedbreaker-builds/releases/latest"
+  "versionCode": 13,
+  "versionName": "0.1.12",
+  "notes": "Power hints for less heat at 60 fps, a firmer 60 Hz display request, hang reports and bug report zips in Download/SpeedBreaker-logs, guarded USA cheats (Black Edition, experimental career payout top-up), the SAVED touch layout, update checks, and Mali-G1 workarounds kept on after a GPU driver update.",
+  "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
