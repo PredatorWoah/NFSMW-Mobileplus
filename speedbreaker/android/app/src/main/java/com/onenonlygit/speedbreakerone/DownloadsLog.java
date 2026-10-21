@@ -36,6 +36,9 @@ import java.util.*;
  *   sb_<time>_<kind>_<log>       the native session log (files/data/speedbreaker/logs, where
  *                                stderr goes) and android-diagnostics.log,
  *                                copied every second as they grow
+ *   hang-*.txt, crash-*.txt,     the runtime's hang and crash reports and the
+ *   speedbreaker-bug-report-*.zip  Save Bug Report zips, whole, once each (also
+ *                                one a crashed session left, at the next start)
  *
  * and, when the launcher opens after a game process ended badly (crash, native
  * crash, ANR, low memory), sb_<time>_exit.txt with Android's reason, the logcat
@@ -185,14 +188,25 @@ final class DownloadsLog {
         // <files>/data/speedbreaker/logs (user/paths.h: UserDataBase()/kUserFolderName),
         // or data/nfsmw-recomp/logs where an old folder could not be renamed.
         List<File> files = new ArrayList<>();
+        // Also the hang and crash reports beside them (runtime/report/watchdog.cpp,
+        // crash.cpp) and the Save Bug Report zips in the user folder
+        // (bug_report.cpp; written to a .partial and renamed, so whole).
         for (String user : new String[] {"speedbreaker", "nfsmw-recomp"}) {
-            File[] logs = new File(new File(new File(ctx.getFilesDir(), "data"), user), "logs")
-                    .listFiles((dir, name) -> name.endsWith(".log"));
+            File folder = new File(new File(ctx.getFilesDir(), "data"), user);
+            File[] logs = new File(folder, "logs").listFiles((dir, name) -> name.endsWith(".log")
+                    || ((name.startsWith("hang-") || name.startsWith("crash-")) && name.endsWith(".txt")));
             if (logs != null) files.addAll(Arrays.asList(logs));
+            File[] reports = folder.listFiles((dir, name) -> name.startsWith("speedbreaker-bug-report-") && name.endsWith(".zip"));
+            if (reports != null) files.addAll(Arrays.asList(reports));
         }
         files.add(new File(ctx.getFilesDir(), "android-diagnostics.log"));
         for (File f : files) {
-            if (!f.isFile() || (!copies.containsKey(f) && f.lastModified() < started - 2000)) continue;
+            if (!f.isFile()) continue;
+            if (!f.getName().endsWith(".log")) {
+                copyReport(f);
+                continue;
+            }
+            if (!copies.containsKey(f) && f.lastModified() < started - 2000) continue;
             long from = copied.getOrDefault(f, 0L), length = f.length();
             if (length < from) from = 0;
             if (length == from) continue;
@@ -212,6 +226,31 @@ final class DownloadsLog {
             }
             copied.put(f, from);
         }
+    }
+
+    /**
+     * A hang or crash report or a bug report zip, whole, once: also one an
+     * earlier session left (a crash report is written as the process dies, so
+     * only the next session can copy it). The names already copied are kept in
+     * the prefs; reports older than 3 days are left alone.
+     */
+    private void copyReport(File f) {
+        long age = System.currentTimeMillis() - f.lastModified();
+        if (age < 2000 || age > 3L * 24 * 3600 * 1000) return;  // still being written, or old
+        SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        Set<String> done = new HashSet<>(p.getStringSet("reports", Collections.emptySet()));
+        if (done.contains(f.getName())) return;
+        OutputStream o = create(ctx, f.getName());
+        if (o == null) return;
+        try {
+            Files.copy(f.toPath(), o);
+        } catch (IOException e) {
+            Log.w(TAG, "could not copy " + f + ": " + e);
+        }
+        close(o);
+        done.add(f.getName());
+        p.edit().putStringSet("reports", done).apply();
+        diag("copied " + f.getName() + " to Download/SpeedBreaker-logs");
     }
 
     private String sample() {
@@ -341,7 +380,8 @@ final class DownloadsLog {
         try {
             ContentValues v = new ContentValues();
             v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
-            v.put(MediaStore.MediaColumns.MIME_TYPE, name.endsWith(".pb") ? "application/octet-stream" : "text/plain");
+            v.put(MediaStore.MediaColumns.MIME_TYPE, name.endsWith(".pb") ? "application/octet-stream"
+                    : name.endsWith(".zip") ? "application/zip" : "text/plain");
             v.put(MediaStore.MediaColumns.RELATIVE_PATH, FOLDER);
             Uri uri = ctx.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
             if (uri != null) {
