@@ -240,6 +240,13 @@ namespace
         Driver cp;
         cp.Run(2000, State::Nominal, 45, 14, 18, 14, 18);
         CHECK(cp.switches.size() == 1, "CP-bound: %zu switches", cp.switches.size());
+        // Android (performance hints lower the clocks at 30, so the CP reads
+        // high there): tries after kTrySec all the same, backing off.
+        Driver android;
+        android.policy.SetTryNeedsCp(false);
+        android.Run(2000, State::Nominal, 45, 14, 18, 20, 18);
+        CHECK(android.switches.size() >= 3 && android.switches[1].reason == FrameRateReason::Try,
+            "Android CP at 30: %zu switches", android.switches.size());
     }
 
     void BackoffResets()

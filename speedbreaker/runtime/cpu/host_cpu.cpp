@@ -76,6 +76,18 @@ namespace hostcpu
         }
         if (cpus.empty())
             return;
+        // ARM numbers cores within each cluster: the Dimensity 9500's cpu 0,
+        // 4 and 7 all read core 0 of package 0, and 0.1.25 reserved all three
+        // as one (cpu 0 a 2.7 GHz core). CPUs sharing a number at different
+        // speeds or capacities aren't one core's threads: each is its own.
+        for (const Cpu& a : cpus)
+            if (std::any_of(cpus.begin(), cpus.end(), [&](const Cpu& b) {
+                    return b.core == a.core && (b.speed != a.speed || b.capacity != a.capacity); }))
+            {
+                for (Cpu& c : cpus)
+                    c.core = uint64_t(c.cpu);
+                break;
+            }
         auto [low, high] = std::minmax_element(cpus.begin(), cpus.end(), [](const Cpu& a, const Cpu& b) { return a.speed < b.speed; });
         if (low->speed == 0)
             return;

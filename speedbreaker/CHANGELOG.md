@@ -4,6 +4,16 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.26 (2026-10-22)
+
+- The prime core, really this time: 0.1.25 reserved cpu 0, 4 and 7 together
+  (ARM numbers cores within each cluster, so all three read "core 0"), and
+  the draw thread could land on a 2.7 GHz core. Now just cpu 7.
+- Frame Rate Auto comes back to 60 on Android: after 3 minutes at 30 with
+  the phone cool it tries 60 again (backing off if 60 still can't hold).
+  It waited for the draw thread to look fast at 30, but Android lowers the
+  clocks at 30, so it never did and Auto stayed at 30 for good.
+
 ## v0.1.25 (2026-10-21)
 
 - The command processor gets the phone's fastest core to itself again. On a

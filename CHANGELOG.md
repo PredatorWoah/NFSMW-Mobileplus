@@ -21,6 +21,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: Auto vuelve a 60 y el núcleo principal, de verdad** (0.1.26). La 0.1.25
+  reservó cpu 0, 4 y 7 juntas (ARM numera los núcleos dentro de cada clúster: los tres leen
+  "core 0"); ahora solo cpu 7. Y Auto, ya a 30, esperaba a que el procesador de comandos
+  pareciera rápido a 30, pero Android baja las frecuencias a 30 (20 ms frente a 14,5 a 60) y
+  nunca volvía: en Android prueba 60 tras 3 minutos a 30 con el teléfono fresco.
+
 - **SpeedBreaker: el procesador de comandos vuelve a tener su núcleo** (0.1.25). La regla que
   reserva el núcleo más rápido pedía dos iguales; el Dimensity 9500 del vivo X300 Pro tiene uno
   solo (cpu 7, 4,21 GHz), y el hilo de dibujo acababa en los de 3,5 GHz, que el calor limita a
