@@ -16,10 +16,37 @@ std::atomic<bool> ready{false}, blocked{false};
 SDL_Joystick* joystick=nullptr;
 SDL_JoystickID id=0;
 float Limit(float v,float lo,float hi) { return std::isfinite(v)?std::clamp(v,lo,hi):0; }
+
+// The game's rumble on the phone's motor: TouchGamepadView.rumble(int), its
+// class and method cached from a UI-thread call (the app's class loader; a
+// native thread's FindClass wouldn't see it).
+jclass viewClass=nullptr;
+jmethodID rumbleMethod=nullptr;
+std::atomic<int> lastAmplitude{-1};
+void CacheView(JNIEnv* env,jclass type) {
+    if(viewClass) return;
+    viewClass=static_cast<jclass>(env->NewGlobalRef(type));
+    rumbleMethod=env->GetStaticMethodID(viewClass,"rumble","(I)V");
+    if(!rumbleMethod) env->ExceptionClear();
+}
+// SDL_RumbleJoystick on the touch pad (hid/input.cpp sends the game's
+// request, which changes every frame while driving): the stronger motor
+// sets the strength, in 16 steps, and only a change goes to Java.
+bool SDLCALL Rumble(void*,Uint16 low,Uint16 high) {
+    const int amplitude=std::max(int(low)*3/4,int(high))*255/65535;
+    const int stepped=amplitude==0?0:std::max(16,amplitude/16*16);
+    if(lastAmplitude.exchange(stepped)==stepped || !viewClass || !rumbleMethod) return true;
+    auto* env=static_cast<JNIEnv*>(SDL_GetAndroidJNIEnv());
+    if(!env) return false;
+    env->CallStaticVoidMethod(viewClass,rumbleMethod,jint(stepped));
+    if(env->ExceptionCheck()) env->ExceptionClear();
+    return true;
+}
 }
 extern "C" JNIEXPORT void JNICALL
-Java_com_onenonlygit_speedbreakerone_TouchGamepadView_nativeState(JNIEnv*,jclass,jint buttons,
+Java_com_onenonlygit_speedbreakerone_TouchGamepadView_nativeState(JNIEnv* env,jclass type,jint buttons,
         jfloat lx,jfloat ly,jfloat rx,jfloat ry,jfloat lt,jfloat rt) {
+    CacheView(env,type);
     std::lock_guard lock(mutex);
     state={uint32_t(buttons),{Limit(lx,-1,1),Limit(ly,-1,1),Limit(rx,-1,1),Limit(ry,-1,1),Limit(lt,0,1),Limit(rt,0,1)}};
 }
@@ -62,6 +89,7 @@ void Initialize() {
     desc.type=SDL_JOYSTICK_TYPE_GAMEPAD;
     desc.naxes=SDL_GAMEPAD_AXIS_COUNT;desc.nbuttons=SDL_GAMEPAD_BUTTON_COUNT;
     desc.name="SpeedBreaker touch gamepad";
+    desc.Rumble=Rumble;  // the phone's vibration motor (TouchGamepadView.rumble)
     id=SDL_AttachVirtualJoystick(&desc);
     joystick=id?SDL_OpenJoystick(id):nullptr;
     if(!joystick) { fprintf(stderr,"[touch] attach failed: %s\n",SDL_GetError());return; }
