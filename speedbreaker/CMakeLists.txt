@@ -67,7 +67,7 @@ endif()
 # (v<version>). CHANGELOG.md has an entry for each version (the in-game
 # "What's new" note is built from it).
 if(ANDROID)
-    project(SpeedBreaker VERSION 0.1.11 LANGUAGES C CXX)
+    project(SpeedBreaker VERSION 0.1.12 LANGUAGES C CXX)
 else()
     project(SpeedBreaker VERSION 0.1.4 LANGUAGES C CXX)
 endif()

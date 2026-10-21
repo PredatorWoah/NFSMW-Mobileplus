@@ -4,6 +4,19 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.12 (2026-10-21)
+
+- Android power hints (ADPF): the CPU runs at the lowest clocks that still make
+  60 fps, for less heat. Settings > Advanced > Power Hints turns it off.
+- Firmer 60 Hz display request; the launcher's toggle can turn it off.
+- Hang and crash reports and Save Bug Report zips also go to
+  Download/SpeedBreaker-logs.
+- Guarded USA cheats: Black Edition content and an experimental career payout
+  top-up, both off unless chosen in CHEATS; a SAVED touch layout keeps the
+  original custom one.
+- The launcher checks for updates and opens the private release to download.
+- Mali-G1 workarounds stay on after a GPU driver update.
+
 ## v0.1.11 (2026-10-16)
 
 - Android GPU driver launch selector: import ARM64 Turnip ZIPs, retain multiple

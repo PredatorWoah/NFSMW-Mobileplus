@@ -21,6 +21,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: aviso de actualización en el lanzador.** Al abrirse (como mucho cada 6 h) y con
+  **Check for updates**, lee `speedbreaker/update/latest.json` de este repositorio: solo el
+  paquete, la versión, las notas y dónde está. El APK, que lleva el juego recompilado, nunca se
+  publica aquí: va al repositorio **privado** del dueño, y **Download** abre esa release en el
+  navegador. Versión 0.1.12 (código 13); permiso `INTERNET`.
+
 - **SpeedBreaker: menos calor a 60 fps en Android.** Una sesión de pistas de rendimiento
   (ADPF, `APerformanceHint`) con el procesador de comandos y el hilo principal del juego: cada
   fotograma Android sabe cuánto trabajo hubo frente a un objetivo del 80 % del fotograma, y puede
