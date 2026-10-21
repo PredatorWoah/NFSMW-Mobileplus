@@ -82,7 +82,7 @@ constexpr uint32_t kStarsScreen=0x8256AAF4, kStarsReward=0x82364C28;
 bool StarsCode() {
     // li r5,1 and bl 82337198 at both callers; the query's own loads of the
     // table (lwz r8,0(r3); lwz r11,60(r3)) and its mask test (and r10,r11,r5).
-    return Matches({{0x8256AAE0,0x38A00001},{0x8256AAF0,0x49CC66A9},{0x82364C18,0x38A00001},{0x82364C24,0x4BFD2575},
+    return Matches({{0x8256AAE0,0x38A00001},{0x8256AAF0,0x4BDCC6A9},{0x82364C18,0x38A00001},{0x82364C24,0x4BFD2575},
         {0x82337198,0x81030000},{0x823371A0,0x8163003C},{0x823371D8,0x7D6A2838}});
 }
 }

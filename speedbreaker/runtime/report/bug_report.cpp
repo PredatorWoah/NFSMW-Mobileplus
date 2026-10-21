@@ -261,6 +261,10 @@ namespace report
                 notes.push_back(std::format("                ({}.log reached its size cap: {}-latest.txt has the last lines)",
                     SessionName(), SessionName()));
             }
+            // Where every thread is right now: a stuck load that still draws its
+            // loading screen never trips the watchdog, so this is its only stack.
+            items.push_back({ "reports/threads-now.txt", ThreadReport("saved with the bug report (not a hang by itself)"), now });
+            notes.push_back("reports/threads-now.txt  every thread's stack when the report was saved");
             size_t reports[2] = {};
             for (int kind = 0; kind < 2; kind++)
                 for (const auto& path : LogFiles(kind == 0 ? "crash-" : "hang-", ".txt"))

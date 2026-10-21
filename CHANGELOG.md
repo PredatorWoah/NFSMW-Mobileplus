@@ -33,6 +33,14 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
   swaps medidos: las cargas y los tirones lo llevaban a 30 fps con el juego a 60, y Android
   bajaba la CPU justo cuando los fotogramas llegaban tarde.
 
+### Corregido
+
+- **SpeedBreaker: "Challenge Series: all completed" se activa** (0.1.21): una de sus palabras de
+  guarda estaba mal (la rama en `0x8256AAF0`) y lo dejaba apagado. `check_guards.sh` comprueba
+  ahora todas las guardas de `runtime/game` contra el `default.xex`. **Save Bug Report** añade
+  `reports/threads-now.txt`, la pila de cada hilo al guardarlo: una carga que se para con su
+  pantalla de carga aún animada no dispara el watchdog.
+
 ### Añadido
 
 - **SpeedBreaker: vibración y 120 Hz cuando no hay 60** (0.1.20). Un toque háptico al pulsar un
