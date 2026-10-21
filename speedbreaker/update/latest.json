@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 22,
-  "versionName": "0.1.21",
-  "notes": "Challenge Series: all completed now actually turns on (a safety check had one wrong word). Save Bug Report now includes where every thread is, so a stuck loading screen can be fixed.",
+  "versionCode": 23,
+  "versionName": "0.1.22",
+  "notes": "Challenge Series: all completed now really completes the events (locks and the count follow when you reopen the screen). When vivo refuses 60 Hz, the game also votes for 120 Hz.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
