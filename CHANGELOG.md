@@ -19,6 +19,17 @@ Lo de este fork ([victorgbd/NFSMW-Recompiled](https://github.com/victorgbd/NFSMW
 sobre upstream: el port a Android y el trabajo de rendimiento del camino de Xenos. Es un
 proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
+### Corregido
+
+- **SpeedBreaker: el cuelgue al volver al menú tras una carrera** (0.1.13). El informe de
+  cuelgue del vivo X300 Pro mostró un hilo del juego girando sin fin en `sub_8215E5E8`, la
+  búsqueda por nombre en el pool de memoria de 0x82A2E0E0: sus bucles solo paran en una
+  dirección exacta, y un bloque de longitud 0, una cadena que se pasa del final o un rover fuera
+  de la cadena los dejan girando. `runtime/game/pool_guard.cpp` recorre la cadena bajo la sección
+  crítica del pool antes de cada búsqueda: devuelve el rover al inicio si se salió, y responde
+  "no encontrado" si la cadena está rota en vez de no volver nunca. Cada problema va al registro
+  (`[pool-guard]`). `NFSMW_POOL_GUARD=0` lo apaga.
+
 ### Añadido
 
 - **SpeedBreaker: aviso de actualización en el lanzador.** Al abrirse (como mucho cada 6 h) y con
