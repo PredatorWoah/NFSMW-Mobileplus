@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 13,
-  "versionName": "0.1.12",
-  "notes": "Power hints for less heat at 60 fps, a firmer 60 Hz display request, hang reports and bug report zips in Download/SpeedBreaker-logs, guarded USA cheats (Black Edition, experimental career payout top-up), the SAVED touch layout, update checks, and Mali-G1 workarounds kept on after a GPU driver update.",
+  "versionCode": 14,
+  "versionName": "0.1.13",
+  "notes": "Fix for the freeze after a race: a game thread could loop forever in a memory pool lookup. The pool is now checked before each lookup and repaired or skipped, with [pool-guard] lines in the log. If it ever freezes again, send the hang report from Download/SpeedBreaker-logs.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
