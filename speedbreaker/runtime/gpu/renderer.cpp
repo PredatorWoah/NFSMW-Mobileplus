@@ -3859,6 +3859,7 @@ void main()
             uint32_t guestStart, guestSize;
             uint64_t loadedSequence = 0;  // writewatch::Current() when last loaded
             uint64_t checkedEpoch = ~0ull;  // writewatch::WriteEpoch() at the last validity check
+            uint64_t usedFrame = 0;  // s_frame when last sampled or resolved into (TrimTextures)
             bool uploaded = false;
             bool cube = false;
             bool volume = false;
@@ -4444,6 +4445,7 @@ void main()
                         cube ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0, t.levels);
             }
             Texture& t = *slotRef;
+            t.usedFrame = s_frame;
             {
                 // No page written anywhere since the last check: still valid
                 // (a draw binds ~7,500 textures a frame; writes are rare).
@@ -4784,6 +4786,7 @@ void main()
             if (state == TextureEntryState::kValid)
             {
                 c.hits++;
+                e.texture->usedFrame = s_frame;
                 if (s_textureVerify)
                     VerifyTexture(*e.texture, epoch);
                 if (!c.verify)
@@ -5915,6 +5918,7 @@ void main()
                     }
                     if (fused)
                     {
+                        fused->usedFrame = s_frame;
                         rc.texWrite = 1;
                         rc.texEndian = fused->endian;
                         rc.texConvert = fused->convert;
@@ -7316,6 +7320,58 @@ void main()
             size_t textures = DropTextures([](const Texture&) { return true; });
             fprintf(stderr, "[renderer] mipmaps %s: %zu textures dropped in %.1f ms (loaded again as they are drawn)\n",
                 mips ? "on" : "off", textures, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count());
+        }
+
+        // The texture cache keeps every texture it made (dead ones too) until
+        // something drops it. Driving around Rockport streams new ones in for
+        // as long as the game runs: a 44-minute session on the vivo X300 Pro
+        // reached 6,950 textures in 3.8 GB, the app 6.5 GB. Every 10 s, when
+        // the cache is over NFSMW_TEXTURE_BUDGET_MB (Android 1536, elsewhere
+        // 0: off), the textures nothing sampled for 30 s go, the oldest
+        // first, down to 3/4 of it; a texture drawn again loads again from
+        // guest memory, as after a mipmaps change. Waits for the GPU only
+        // when it drops something.
+        const uint64_t s_textureBudget = [] {
+            const char* v = std::getenv("NFSMW_TEXTURE_BUDGET_MB");
+#ifdef __ANDROID__
+            constexpr long defaultMb = 1536;
+#else
+            constexpr long defaultMb = 0;
+#endif
+            return uint64_t(v ? std::max(0L, std::atol(v)) : defaultMb) << 20;
+        }();
+
+        void TrimTextures(uint64_t frame)
+        {
+            constexpr uint64_t kEvery = 600, kUnused = 1800;  // frames: 10 s, 30 s at 60 fps
+            if (!s_textureBudget || frame % kEvery != 0 || frame < kUnused)
+                return;
+            uint64_t total = 0;
+            std::vector<std::pair<uint64_t, Texture*>> idle;  // (last used, texture)
+            for (const auto& [key, t] : s_textures)
+            {
+                total += t->image.bytes;
+                if (!t->scaled && t->usedFrame + kUnused < frame)
+                    idle.push_back({ t->usedFrame, t.get() });
+            }
+            if (total <= s_textureBudget || idle.empty())
+                return;
+            auto start = std::chrono::steady_clock::now();
+            std::sort(idle.begin(), idle.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+            std::unordered_set<const Texture*> drop;
+            uint64_t freed = 0;
+            for (const auto& [used, t] : idle)
+            {
+                if (total - freed <= s_textureBudget / 4 * 3)
+                    break;
+                drop.insert(t);
+                freed += t->image.bytes;
+            }
+            Flush();
+            size_t dropped = DropTextures([&drop](const Texture& t) { return drop.contains(&t); });
+            fprintf(stderr, "[texture-cache] %zu textures unused for 30 s dropped (%llu MB), %zu left in %llu MB (budget %llu MB), %.1f ms\n",
+                dropped, (unsigned long long)(freed >> 20), s_textures.size(), (unsigned long long)((total - freed) >> 20),
+                (unsigned long long)(s_textureBudget >> 20), std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count());
         }
 
         void ApplyLiveSettings()
@@ -9876,7 +9932,10 @@ void main()
         }
 #endif
         if (s_vk)
+        {
             ApplyLiveSettings();
+            TrimTextures(frame);
+        }
         if (s_uploadLog)
         {
             UploadLog& log = *s_uploadLog;
