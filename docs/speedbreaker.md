@@ -65,7 +65,9 @@ de flujo de control, los de predicados y los de BC.
 
 Dos disposiciones (`TouchGamepadView.java`), cada una con su editor y sus posiciones guardadas
 aparte. La barra de arriba cambia de una a otra en cualquier momento, abre el editor de la que
-se ve (arrastrar, SIZE − / +, SAVE, RESET, CANCEL) y el menú CHEATS.
+se ve (arrastrar, SIZE − / +, SAVE, RESET, CANCEL), el menú CHEATS y **SETTINGS**, los ajustes
+del propio SpeedBreaker (su atajo Back + Start): tope de fps (Auto baja a 30 con el móvil
+caliente), resolución interna, posproceso.
 
 | RACING (rotulada por lo que hace) | Botón del mando |
 |---|---|
@@ -105,7 +107,7 @@ una fuente; nada de interruptores que no hagan nada.
 | Desafío Burger King | ↑ ↓ ↑ ↓ ← → ← → | Ídem |
 | Ford GT de Castrol | ← → ← → ↑ ↓ ↑ ↓ | Ídem. Una lista lo intercambia con el de Burger King |
 | Porsche Cayman | L R R R → ← → ↓ | Ídem. «L/R» son gatillos en unas listas y botones superiores en otras: se mandan los dos |
-| Black Edition | Parche de datos `0x82A2CE04 = 0x100` al arrancar (`runtime/game/cheats.cpp`), el de Xenia para el título 454107D9, que lista el XEX USA | Experimental. Solo escribe si encuentra 0 (o ya 0x100); si no, lo dice en el log |
+| Black Edition | Parche de datos `0x82A2CE04 = 0x100` al arrancar (`runtime/game/cheats.cpp`), el de Xenia para el título 454107D9, que lista el XEX USA | **Funciona** en el XEX USA (vivo X300 Pro, 2026-10-21: `[cheats] Black Edition content: on` y coches desbloqueados). Solo escribe si encuentra 0 (o ya 0x100); si no, lo dice en el log |
 | Dinero (y recompensa) | Buscador de números (`runtime/platform/android/cheat_finder.cpp`): buscar lo que muestra el juego, cambiarlo jugando, volver a buscar, fijar | Probado con memoria simulada; sin probar en el móvil |
 
 Los códigos se introducen en la pantalla de título («Press Start»), como en una 360, y quedan en
