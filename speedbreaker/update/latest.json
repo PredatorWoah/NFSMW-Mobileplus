@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 23,
-  "versionName": "0.1.22",
-  "notes": "Challenge Series: all completed now really completes the events (locks and the count follow when you reopen the screen). When vivo refuses 60 Hz, the game also votes for 120 Hz.",
+  "versionCode": 24,
+  "versionName": "0.1.23",
+  "notes": "Save backups at every start and Garage > Restore save; stuck loading screens save their own report; Frame Rate Auto works on Android (30 fps when the phone is very hot); Cool and Quality presets in Settings > Graphics; a black and gold CHEATS menu.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
