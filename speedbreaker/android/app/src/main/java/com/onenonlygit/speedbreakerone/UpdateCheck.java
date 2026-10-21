@@ -34,7 +34,27 @@ final class UpdateCheck {
 
     private UpdateCheck() { }
 
-    static void check(Activity activity, boolean manual) {
+    /** Called on the UI thread when a newer build is listed (automatic checks only). */
+    interface Found { void found(JSONObject latest); }
+
+    static void check(Activity activity, boolean manual) { check(activity, manual, null); }
+
+    /** The newest manifest seen, if it lists a newer build for this package: for a badge before the network answers. */
+    static JSONObject cachedNewer(Activity activity) {
+        try {
+            JSONObject latest = new JSONObject(activity.getSharedPreferences("update_check", Activity.MODE_PRIVATE).getString("latest", "{}"));
+            return newer(latest) ? latest : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    static boolean newer(JSONObject latest) {
+        return BuildConfig.APPLICATION_ID.equals(latest.optString("applicationId")) && latest.optInt("versionCode", 0) > BuildConfig.VERSION_CODE;
+    }
+
+    /** Automatic checks with a listener show nothing themselves: the listener (the launcher's badge) does. */
+    static void check(Activity activity, boolean manual, Found listener) {
         SharedPreferences prefs = activity.getSharedPreferences("update_check", Activity.MODE_PRIVATE);
         long now = System.currentTimeMillis();
         if (!manual && now - prefs.getLong("last", 0) < INTERVAL_MS) return;
@@ -48,6 +68,7 @@ final class UpdateCheck {
                 error = e.getMessage();
                 Log.w(TAG, "[update] check failed: " + e);
             }
+            if (latest != null) prefs.edit().putString("latest", latest.toString()).apply();
             final JSONObject found = latest;
             final String failed = error;
             activity.runOnUiThread(() -> {
@@ -56,10 +77,14 @@ final class UpdateCheck {
                     if (manual) Toast.makeText(activity, "Couldn't check for updates: " + failed, Toast.LENGTH_LONG).show();
                     return;
                 }
-                show(activity, found, manual);
+                if (!manual && listener != null) { if (newer(found)) listener.found(found); }
+                else show(activity, found, manual);
             });
         }, "SB update check").start();
     }
+
+    /** The "Update available" dialog for this manifest. */
+    static void offer(Activity activity, JSONObject latest) { show(activity, latest, true); }
 
     private static void show(Activity activity, JSONObject latest, boolean manual) {
         boolean ours = BuildConfig.APPLICATION_ID.equals(latest.optString("applicationId"));

@@ -32,6 +32,7 @@
 #include <ui/ui.h>
 #include <user/paths.h>
 #include <user/settings.h>
+#include <user/title_art.h>
 #include <user/version_check.h>
 
 #include <SDL3/SDL.h>
@@ -555,6 +556,8 @@ int main(int argc, char** argv)
     }
     memcpy(g_memory.Translate(image.base), image.data.get(), image.size);
     fprintf(stderr, "[loader] image %08zX-%08zX, entry %08zX\n", image.base, image.base + image.size, image.entry_point);
+    // The disc's own icon and title for the launcher (user/title_art.h).
+    title_art::Save(file, image.data.get(), uint32_t(image.base), uint32_t(image.size));
 
     // Which game files this is, then the whole system summary for the log.
     {
