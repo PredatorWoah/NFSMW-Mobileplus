@@ -135,6 +135,7 @@ namespace report
 
     // Fed by hot paths (relaxed; costs nothing that shows).
     inline std::atomic<uint64_t> g_fileBytesRead{ 0 };   // NtReadFile
+    inline std::atomic<uint64_t> g_audioFrames{ 0 };     // XMA frames decoded (music, speech, effects)
     inline std::atomic<bool> g_testCrash{ false };       // VdSwap calls TestCrash()
     inline std::atomic<bool> g_testHang{ false };        // WAIT_REG_MEM never passes
     [[noreturn]] void TestCrash();

@@ -4,6 +4,23 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.23 (2026-10-21)
+
+- Stall reports: when frames keep coming but nothing is read from the disc and
+  no audio is decoded for 30 s (a load stopped behind its animated loading
+  screen), the watchdog writes a hang report with every thread's stack,
+  quietly. Bug reports also tell the real time since the last disc read.
+- Save backups: each start copies the save folder to save-backups (the newest
+  five, none when nothing changed); the launcher's Garage > Restore save puts
+  one back.
+- Frame Rate Auto works on Android: it reads the phone's thermal status and
+  drops to 30 at severe heat.
+- Settings > Graphics on Android: Cool Preset (anti-aliasing off, 2x
+  filtering, no sharpening, Frame Rate Auto) and Quality Preset. Fullscreen,
+  which does nothing on a phone, is hidden.
+- The launcher says when the phone kept the screen at 90 Hz last time; the
+  CHEATS menu is black and gold like the launcher.
+
 ## v0.1.22 (2026-10-21)
 
 - Challenge Series: all completed now really completes them: each event the

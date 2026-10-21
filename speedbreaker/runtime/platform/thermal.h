@@ -2,8 +2,8 @@
 //
 // The device's thermal state, for the log, the [perf] line and Frame Rate's
 // Auto (video/frame_rate.h). Apple (macOS and iOS) reads NSProcessInfo's
-// thermalState (platform/apple/thermal.mm); other systems have none yet
-// (Unknown). Read about once a second on the main thread (video::RunFrame
+// thermalState (platform/apple/thermal.mm), Android its thermal status
+// (AThermal, thermal.cpp); other systems have none yet (Unknown). Read about once a second on the main thread (video::RunFrame
 // calls Poll), off the command processor's path, so Current() costs one
 // atomic load anywhere. Each change goes to the log ("[thermal] nominal ->
 // fair at 123.4 s").
