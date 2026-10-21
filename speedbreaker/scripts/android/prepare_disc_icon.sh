@@ -8,9 +8,10 @@
 # speedometer icon, as the CI test APK always does. Nothing of the game is ever
 # committed: run this where the game APK is built, after prepare_recompiler.sh.
 #
-# An HD picture of the owner's choosing at private/app-icon.png (or .jpg;
-# private/ is git-ignored) is used instead of the disc's 64x64 icon, its
-# centre square.
+# With the game's cover art at private/cover.jpg (or .png; private/ is
+# git-ignored), that is used instead, in HD: the app icon is its top square
+# (the logo and the car), and the launcher gets it as art (launcher_art) and as
+# its faded background (launcher_background), in res/drawable-nodpi.
 #
 #   scripts/android/prepare_disc_icon.sh [path/to/default.xex]
 set -euo pipefail
@@ -24,21 +25,32 @@ LIBS=$(find "$XR/build" -name '*.a' ! -path '*XenonAnalyse*')
 "${CXX:-clang++}" -std=c++20 -O1 -I"$XR/XenonUtils" -I"$XR/thirdparty" -I"$XR/thirdparty/simde" \
     "$ROOT/scripts/android/title_icon.cpp" "$XR/build/XenonUtils/libXenonUtils.a" $LIBS -o "$WORK/title_icon"
 "$WORK/title_icon" "$XEX" "$WORK/icon.png"
-for pic in "$ROOT/private/app-icon.png" "$ROOT/private/app-icon.jpg"; do
-    [ -f "$pic" ] && { cp "$pic" "$WORK/icon.png"; echo "HD icon picture: $pic"; break; }
+COVER=""
+for pic in "$ROOT/private/cover.jpg" "$ROOT/private/cover.png"; do
+    [ -f "$pic" ] && { COVER="$pic"; echo "cover art: $pic"; break; }
 done
-python3 -I - "$WORK/icon.png" "$ROOT/android/app/src/disc/res" <<'PY'
-# Adaptive icon: black background; the art centred at 66 of the 108dp
-# foreground (the safe zone: launchers show the centre 72, masks keep 66).
+rm -rf "$ROOT/android/app/src/disc/res"
+python3 -I - "$WORK/icon.png" "$ROOT/android/app/src/disc/res" "$COVER" <<'PY'
+# Adaptive icon: black background; the disc's art centred at 66 of the 108dp
+# foreground (the safe zone: launchers show the centre 72, masks keep 66), or
+# the cover's square filling the visible 72.
 import os, sys
 from PIL import Image, ImageDraw
-src, res = sys.argv[1], sys.argv[2]
+src, res, cover = sys.argv[1], sys.argv[2], sys.argv[3]
 art = Image.open(src).convert("RGBA")
-side = min(art.size)  # an HD picture: its centre square
-art = art.crop(((art.width - side) // 2, (art.height - side) // 2, (art.width + side) // 2, (art.height + side) // 2))
+size = 66
+if cover:
+    c = Image.open(cover).convert("RGB")
+    side = round(c.width * 0.875)  # the logo across the top and the car under it
+    art = c.crop(((c.width - side) // 2, 0, (c.width + side) // 2, side)).convert("RGBA")
+    size = 72
+    d = os.path.join(res, "drawable-nodpi"); os.makedirs(d, exist_ok=True)
+    c.thumbnail((1600, 1600), Image.LANCZOS)
+    c.save(os.path.join(d, "launcher_background.jpg"), quality=90)
+    art.convert("RGB").resize((512, 512), Image.LANCZOS).save(os.path.join(d, "launcher_art.png"))
 for name, scale in (("mdpi", 1), ("hdpi", 1.5), ("xhdpi", 2), ("xxhdpi", 3), ("xxxhdpi", 4)):
     d = os.path.join(res, "mipmap-" + name); os.makedirs(d, exist_ok=True)
-    full, inner = round(108 * scale), round(66 * scale)
+    full, inner = round(108 * scale), round(size * scale)
     tile = art.resize((inner, inner), Image.LANCZOS)
     mask = Image.new("L", (inner, inner), 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, inner - 1, inner - 1), radius=round(8 * scale), fill=255)

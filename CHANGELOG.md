@@ -35,11 +35,10 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
-- **SpeedBreaker: fondo e icono a elegir en el Garage** (0.1.19). Cualquier imagen del teléfono:
-  el fondo llena el lanzador, atenuado y oscurecido hacia los botones; el icono (un cuadrado
-  central en HD) sustituye al de 64x64 del disco en el lanzador y en el acceso directo, que se
-  actualiza si ya está anclado. `prepare_disc_icon.sh` usa `private/app-icon.png`/`.jpg`
-  (ignorado por git) como icono HD de la app si existe.
+- **SpeedBreaker: la portada del juego en HD** (0.1.19), solo en el APK privado del dueño desde
+  `private/cover.jpg` (ignorado por git; `prepare_disc_icon.sh`): el icono de la app es su
+  cuadrado superior (el logo y el M3 GTR), el lanzador lo muestra en el marco dorado y la portada
+  entera detrás, atenuada y más oscura hacia los botones.
 
 - **SpeedBreaker: el icono de la app es el del juego** (0.1.18), hecho del `default.xex` del
   jugador al compilar (`scripts/android/prepare_disc_icon.sh` → `android/app/src/disc/res`,

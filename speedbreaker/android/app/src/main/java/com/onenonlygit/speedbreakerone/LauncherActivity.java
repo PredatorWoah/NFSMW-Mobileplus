@@ -20,7 +20,7 @@ import java.util.zip.*;
 
 /** The selector stays outside the Vulkan process, including after a driver crash. */
 public final class LauncherActivity extends Activity {
-    private static final int IMPORT = 7312, PICK_BACKGROUND = 7313, PICK_ICON = 7314;
+    private static final int IMPORT = 7312;
     /** From the game's CHEATS menu: restart the game process with the saved choices. */
     static final String EXTRA_RESTART = "restart_game";
     private SharedPreferences prefs;
@@ -41,6 +41,7 @@ public final class LauncherActivity extends Activity {
         garage.setVisibility(android.view.View.GONE);
         setContentView(root);
         refresh();
+        updatePinnedShortcut();  // a shortcut pinned by an older build takes the current icon
         // Why the last game process ended, if it ended badly (DownloadsLog). Reads logcat: off the UI thread.
         android.content.Context app = getApplicationContext();
         new Thread(() -> DownloadsLog.reportExits(app), "exit-report").start();
@@ -58,9 +59,9 @@ public final class LauncherActivity extends Activity {
     private android.view.View home, garage;
     private android.widget.ImageView art;
     private TextView title, running, badge;
-    private Button driverRow, logsRow, displayRow, updatesRow, shortcutRow, backgroundRow, iconRow;
+    private Button driverRow, logsRow, displayRow, updatesRow, shortcutRow;
     private MwTheme.Backdrop backdrop;
-    private long backgroundStamp = -1;
+    private boolean backdropSet;
     private android.window.OnBackInvokedCallback garageBack;
 
     private android.view.View buildHome() {
@@ -159,15 +160,9 @@ public final class LauncherActivity extends Activity {
         updatesRow.setOnClickListener(v -> UpdateCheck.check(this, true));
         shortcutRow = MwTheme.row(this);
         shortcutRow.setOnClickListener(v -> pinShortcut());
-        // Pictures of the player's choosing (any image on the phone, e.g. a saved
-        // wallpaper): a faded background, and an HD icon for the art and the shortcut.
-        backgroundRow = MwTheme.row(this);
-        backgroundRow.setOnClickListener(v -> choosePicture("Background picture", PICK_BACKGROUND, BACKGROUND));
-        iconRow = MwTheme.row(this);
-        iconRow.setOnClickListener(v -> choosePicture("Icon picture", PICK_ICON, ICON));
         Button back = MwTheme.secondary(this, "Back");
         back.setOnClickListener(v -> showGarage(false));
-        for (Button b : new Button[] {backgroundRow, iconRow, shortcutRow, driverRow, logsRow, displayRow, updatesRow}) {
+        for (Button b : new Button[] {shortcutRow, driverRow, logsRow, displayRow, updatesRow}) {
             LinearLayout.LayoutParams each = new LinearLayout.LayoutParams(-1, -2);
             each.topMargin = MwTheme.dp(this, 10);
             list.addView(b, each);
@@ -189,7 +184,7 @@ public final class LauncherActivity extends Activity {
         garage.setVisibility(show ? android.view.View.VISIBLE : android.view.View.GONE);
         if (show) {
             refresh();
-            backgroundRow.requestFocus();
+            shortcutRow.requestFocus();
             if (garageBack == null) {
                 garageBack = () -> showGarage(false);
                 getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, garageBack);
@@ -211,49 +206,14 @@ public final class LauncherActivity extends Activity {
     // The disc's art and name, saved by the game process (runtime/user/title_art.cpp).
     private File userFile(String name) { return new File(new File(new File(getFilesDir(), "data"), "speedbreaker"), name); }
 
-    // The player's pictures, kept in the app's files (Garage).
-    private static final String BACKGROUND = "launcher-background.jpg", ICON = "launcher-icon.png";
-    private File pictureFile(String name) { return new File(getFilesDir(), name); }
-
-    private void choosePicture(String what, int request, String name) {
-        boolean set = pictureFile(name).isFile();
-        String[] items = set ? new String[] {"Choose a picture…", "Remove it"} : new String[] {"Choose a picture…"};
-        new AlertDialog.Builder(this).setTitle(what).setItems(items, (d, which) -> {
-            if (which == 1) { pictureFile(name).delete(); refresh(); return; }
-            startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), request);
-        }).setNegativeButton("Cancel", null).show();
-    }
-
-    /** Decodes the chosen image at a sensible size (the background up to 2400 px, the icon a 512 px centre square) and keeps it. */
-    private void savePicture(Uri uri, String name) {
-        new Thread(() -> {
-            try {
-                boolean icon = ICON.equals(name);
-                android.graphics.Bitmap bitmap = android.graphics.ImageDecoder.decodeBitmap(
-                        android.graphics.ImageDecoder.createSource(getContentResolver(), uri), (decoder, info, source) -> {
-                            int w = info.getSize().getWidth(), h = info.getSize().getHeight();
-                            float limit = icon ? 512f / Math.min(w, h) : 2400f / Math.max(w, h);
-                            if (limit < 1) decoder.setTargetSize(Math.max(1, Math.round(w * limit)), Math.max(1, Math.round(h * limit)));
-                            decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
-                        });
-                if (icon) {
-                    int side = Math.min(bitmap.getWidth(), bitmap.getHeight());
-                    bitmap = android.graphics.Bitmap.createBitmap(bitmap, (bitmap.getWidth() - side) / 2, (bitmap.getHeight() - side) / 2, side, side);
-                }
-                File out = pictureFile(name), part = new File(out.getPath() + ".part");
-                try (FileOutputStream stream = new FileOutputStream(part)) {
-                    bitmap.compress(icon ? android.graphics.Bitmap.CompressFormat.PNG : android.graphics.Bitmap.CompressFormat.JPEG, 92, stream);
-                }
-                if (!part.renameTo(out)) throw new IOException("Cannot keep the picture.");
-                runOnUiThread(() -> { refresh(); if (icon) updatePinnedShortcut(); });
-            } catch (Exception e) {
-                runOnUiThread(() -> error("That picture couldn't be used: " + e.getMessage()));
-            }
-        }, "picture-import").start();
-    }
+    // The cover art, in the game APK when it was built with private/cover.jpg
+    // (scripts/android/prepare_disc_icon.sh): resources that exist only there,
+    // so looked up by name. 0 when absent.
+    private int coverResource(String name) { return getResources().getIdentifier(name, "drawable", getPackageName()); }
 
     private android.graphics.Bitmap titleIcon(int size) {
-        android.graphics.Bitmap icon = android.graphics.BitmapFactory.decodeFile(pictureFile(ICON).getPath());
+        int cover = coverResource("launcher_art");
+        android.graphics.Bitmap icon = cover != 0 ? android.graphics.BitmapFactory.decodeResource(getResources(), cover) : null;
         if (icon == null) icon = android.graphics.BitmapFactory.decodeFile(userFile("title-icon.png").getPath());
         return icon == null ? null : android.graphics.Bitmap.createScaledBitmap(icon, size, size, true);
     }
@@ -284,7 +244,7 @@ public final class LauncherActivity extends Activity {
         return out;
     }
 
-    /** A new icon picture: the shortcut already on the home screen takes it too. */
+    /** The shortcut already on the home screen, if any, with the current icon. */
     private void updatePinnedShortcut() {
         android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);
         android.graphics.Bitmap icon = titleIcon(512);
@@ -319,7 +279,7 @@ public final class LauncherActivity extends Activity {
                 return true;
             }
             android.view.View focused = getCurrentFocus();
-            if (focused == null) { (garage.getVisibility() == android.view.View.VISIBLE ? backgroundRow : play).requestFocus(); return true; }
+            if (focused == null) { (garage.getVisibility() == android.view.View.VISIBLE ? shortcutRow : play).requestFocus(); return true; }
             focused.performClick();
             return true;
         }
@@ -354,11 +314,10 @@ public final class LauncherActivity extends Activity {
         boolean live = gamePid() != 0;
         android.graphics.Bitmap icon = titleIcon(512);
         if (icon != null) art.setImageBitmap(icon); else art.setImageResource(R.mipmap.ic_launcher);
-        File background = pictureFile(BACKGROUND);
-        long stamp = background.isFile() ? background.lastModified() : 0;
-        if (stamp != backgroundStamp) {  // decoded again only when it changed
-            backgroundStamp = stamp;
-            backdrop.setPicture(stamp == 0 ? null : android.graphics.BitmapFactory.decodeFile(background.getPath()));
+        if (!backdropSet) {
+            backdropSet = true;
+            int background = coverResource("launcher_background");
+            if (background != 0) backdrop.setPicture(android.graphics.BitmapFactory.decodeResource(getResources(), background));
         }
         String name = titleName();
         title.setText(name.isEmpty() ? "SpeedBreaker One" : name);
@@ -375,9 +334,7 @@ public final class LauncherActivity extends Activity {
         logsRow.setText("Logs to Downloads:  " + (DownloadsLog.enabled(this) ? "on (Download/SpeedBreaker-logs)" : "off"));
         displayRow.setText("60 Hz display request:  " + (displayPrefs.getBoolean("prefer60", true) ? "on" : "off"));
         updatesRow.setText("Check for updates  (" + BuildConfig.VERSION_NAME + ")");
-        shortcutRow.setText("Add to home screen" + (icon == null ? "  (start the game once first)" : "  (with the icon below)"));
-        backgroundRow.setText("Background picture:  " + (pictureFile(BACKGROUND).isFile() ? "yours" : "none (choose any image)"));
-        iconRow.setText("Icon picture:  " + (pictureFile(ICON).isFile() ? "yours (HD)" : "the disc's (choose any image for HD)"));
+        shortcutRow.setText("Add to home screen" + (icon == null ? "  (start the game once first)" : "  (a shortcut straight to the race)"));
     }
     private void play(boolean restart) {
         if (importing) return;
@@ -450,7 +407,6 @@ public final class LauncherActivity extends Activity {
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request,result,data);
         if (result!=RESULT_OK || data==null || data.getData()==null) return;
-        if (request==PICK_BACKGROUND || request==PICK_ICON) { savePicture(data.getData(), request==PICK_ICON ? ICON : BACKGROUND); return; }
         if (request!=IMPORT) return;
         Uri uri = data.getData(); importing=true; refresh();
         new Thread(() -> {

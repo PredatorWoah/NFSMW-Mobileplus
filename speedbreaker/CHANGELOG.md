@@ -6,13 +6,11 @@ it's built into the game).
 
 ## v0.1.19 (2026-10-21)
 
-- Garage: Background picture and Icon picture. Choose any image on the phone
-  (a saved wallpaper): the background fills the launcher, faded and darkened
-  toward the buttons; the icon picture (an HD centre square) replaces the disc's
-  64x64 icon in the launcher and on the home-screen shortcut, which updates if
-  it is already pinned.
-- prepare_disc_icon.sh takes an HD app icon from private/app-icon.png or .jpg
-  (git-ignored) when there is one.
+- The game's cover art in HD, built into the owner's private APK from
+  private/cover.jpg (git-ignored; prepare_disc_icon.sh): the app icon is its top
+  square (the logo and the M3 GTR), the launcher shows that square in the gold
+  frame and the whole cover behind everything, faded and darker toward the
+  buttons. A home-screen shortcut already pinned takes the new icon.
 
 ## v0.1.18 (2026-10-21)
 
