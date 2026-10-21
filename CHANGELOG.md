@@ -35,6 +35,11 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: el icono de la app es el del juego** (0.1.18), hecho del `default.xex` del
+  jugador al compilar (`scripts/android/prepare_disc_icon.sh` → `android/app/src/disc/res`,
+  ignorado por git): el icono del panel de la 360 centrado en la zona segura de un icono
+  adaptativo negro. Sin esa carpeta (el APK de pruebas de la CI) queda el velocímetro.
+
 - **SpeedBreaker: lanzador con aspecto de juego, negro y dorado** (0.1.17). El icono y el título
   del propio disco del jugador (el recurso XDBF de su `default.xex`, que el proceso del juego
   guarda en `title-icon.png`/`title.txt`, `runtime/user/title_art.cpp`), un gran botón RACE

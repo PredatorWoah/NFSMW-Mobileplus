@@ -14,7 +14,8 @@ To publish a build:
 
 1. Raise `versionCode` and `versionName` in `android/app/build.gradle` (and the version in
    `CMakeLists.txt`).
-2. Build the game APK and sign it with the same key as the installed app (it then
+2. Run `scripts/android/prepare_disc_icon.sh` (the app icon from the owner's disc, never
+   committed), build the game APK and sign it with the same key as the installed app (it then
    installs over it, keeping the saves).
 3. Release it in `NFSMW-Mali` (pushing `apk/<name>.apk` there makes the release:
    its workflow attaches the file).
