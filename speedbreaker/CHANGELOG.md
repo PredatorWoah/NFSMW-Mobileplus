@@ -4,6 +4,12 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.18 (2026-10-21)
+
+- The game APK's app icon is now the game's own dashboard icon, made from the
+  player's default.xex at build time (scripts/android/prepare_disc_icon.sh) and
+  never committed; builds without it (the CI test APK) keep the speedometer.
+
 ## v0.1.17 (2026-10-21)
 
 - A game-like launcher, black and gold: the disc's own icon and title, a big

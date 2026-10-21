@@ -9,13 +9,20 @@ android {
         applicationId 'com.onenonlygit.speedbreakerone'
         minSdk 33
         targetSdk 35
-        versionCode 18
-        versionName '0.1.17'
+        versionCode 19
+        versionName '0.1.18'
         buildConfigField 'boolean', 'PLATFORM_PROBE', (project.findProperty('sbDiagnostics') == 'ON' ? 'true' : 'false')
         // A test build that installs NEXT TO the game instead of over it (the
         // CI's, signed with another key): -PsbAppIdSuffix=.test -PsbAppName="SpeedBreaker Test"
         if (project.hasProperty('sbAppIdSuffix')) applicationIdSuffix project.property('sbAppIdSuffix')
         resValue 'string', 'app_name', (project.findProperty('sbAppName') ?: 'SpeedBreaker One')
+        // The launcher icon: the game's own, made from the player's disc by
+        // scripts/android/prepare_disc_icon.sh into src/disc/res (git-ignored),
+        // when it's there and this is the game (not the test APK); else the
+        // speedometer.
+        def discIcon = file('src/disc/res').isDirectory() && project.findProperty('sbDiagnostics') != 'ON'
+        manifestPlaceholders = [appIcon: discIcon ? '@mipmap/ic_launcher_disc' : '@mipmap/ic_launcher',
+                                appRoundIcon: discIcon ? '@mipmap/ic_launcher_disc_round' : '@mipmap/ic_launcher_round']
         ndk { abiFilters 'arm64-v8a' }
         externalNativeBuild { cmake {
             arguments '-DANDROID_STL=c++_shared', "-DSB_ANDROID_DIAGNOSTICS=${project.findProperty('sbDiagnostics') ?: 'OFF'}"
@@ -38,6 +45,7 @@ android {
     }
     packagingOptions { jniLibs { useLegacyPackaging true } }
     sourceSets.main.java.srcDirs += '../../tools/SDL/android-project/app/src/main/java'
+    if (file('src/disc/res').isDirectory()) sourceSets.main.res.srcDirs += 'src/disc/res'
     // Package a separately built full runtime without compiling it twice.
     // Normal builds keep the managed CMake path. Never use compile fixtures.
     if (project.findProperty('sbNativeDir')) {
