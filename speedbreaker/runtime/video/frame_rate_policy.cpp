@@ -101,7 +101,7 @@ namespace video
             d.coolSeconds = hot ? 0.0 : now - std::max(m_lastSwitch, m_lastHot);
             const bool cool = !hot && d.coolSeconds >= kCoolSec * scale;
             const bool headroom = full && d.cpMs <= kRiseCpMs && d.gpuMs <= kRiseGpuMs;
-            const bool tryIt = full && now - m_lastSwitch >= kTrySec * scale && d.cpMs <= kRiseCpMs;
+            const bool tryIt = full && now - m_lastSwitch >= kTrySec * scale && (!m_tryNeedsCp || d.cpMs <= kRiseCpMs);
             if (dwelt && cool && (headroom || tryIt))
             {
                 d.changed = true;

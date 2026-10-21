@@ -112,7 +112,12 @@ namespace video
         if (!AutoOn())
             return;
         if (s_restart.exchange(false, std::memory_order_acquire))
+        {
             s_policy.Reset();
+#ifdef __ANDROID__
+            s_policy.SetTryNeedsCp(false);  // (performance hints: see the policy)
+#endif
+        }
         const platform::thermal::State thermal = platform::thermal::Current();
         const FrameRateDecision d = s_policy.Update(report::SessionSeconds(), thermal, sample);
         // Every time, not only on a change: a menu change racing this update

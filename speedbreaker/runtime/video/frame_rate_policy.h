@@ -102,6 +102,11 @@ namespace video
         // so (every 30 swaps).
         FrameRateDecision Update(double now, platform::thermal::State thermal, const FrameSample& sample);
         int Rate() const { return m_rate; }
+        // False: a try doesn't wait for the CP to read within kRiseCpMs at 30.
+        // Android's performance hints aim a 30 fps frame at 26.7 ms and lower
+        // the clocks to fit: the vivo X300 Pro's command processor read 20
+        // ms at 30 after 14.5 at 60, and that bar kept it at 30 for good.
+        void SetTryNeedsCp(bool needs) { m_tryNeedsCp = needs; }
 
         static constexpr double kWindowSec = 10;     // of game time
         static constexpr double kDropFps = 54;
@@ -126,5 +131,6 @@ namespace video
         double m_lastRise = kLongAgo;
         double m_lastHot = kLongAgo;  // the last update that saw thermal serious or critical
         int m_backoff = 0;
+        bool m_tryNeedsCp = true;
     };
 }
