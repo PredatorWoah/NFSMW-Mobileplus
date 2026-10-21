@@ -6783,11 +6783,30 @@ void main()
             return m;
         }
 
+        // Arm's Mali-G1 family (Mali-G1-Ultra/-Premium/-Pro, any core count),
+        // where both workarounds keyed on this were measured: the Vivo X300 Pro's
+        // Mali-G1-Ultra MC12, driver r54p1 (226496512). Matched by family, not by
+        // that exact driver build: a system update ships a new driver, and
+        // silently dropping both workarounds would bring back the video stripes
+        // and the minutes-long shader compile on loading a save. A driver other
+        // than the measured one is logged so a regression can be traced to it.
         bool ObservedMaliG1Driver(const VkPhysicalDeviceProperties& props)
         {
 #ifdef __ANDROID__
-            return props.vendorID == 0x13b5 && std::string_view(props.deviceName) == "Mali-G1-Ultra MC12" &&
-                props.driverVersion == 226496512;
+            const std::string_view name(props.deviceName);
+            const bool g1 = props.vendorID == 0x13b5 && name.starts_with("Mali-G1") &&
+                (name.size() == 7 || name[7] < '0' || name[7] > '9');
+            if (g1 && props.driverVersion != 226496512)
+            {
+                static const bool once = [&] {
+                    fprintf(stderr, "[renderer] Mali-G1 driver %u differs from the measured r54p1 (226496512): "
+                        "workarounds kept on; NFSMW_FORWARD_CF=0 / NFSMW_SHARED_MEMORY=import compare without them\n",
+                        props.driverVersion);
+                    return true;
+                }();
+                (void)once;
+            }
+            return g1;
 #else
             return false;
 #endif
