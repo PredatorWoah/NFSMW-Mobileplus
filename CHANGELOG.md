@@ -21,6 +21,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: la Challenge Series se completa de verdad** (0.1.22). Solo dibujar las
+  estrellas no bastaba: los candados (`sub_822E8CC8`) y la cuenta (5/69) leen los registros.
+  Ahora cada evento que la pantalla pregunta recibe el bit de completado del juego en su propio
+  registro (sin añadir nada fuera de la tabla) y el juego recuenta (`sub_82335F90`) al terminar
+  la pantalla. Con 60 Hz rechazados, la superficie vota por 120 Hz.
+
 - **SpeedBreaker: el cuelgue al volver al menú tras una carrera** (0.1.13). El informe de
   cuelgue del vivo X300 Pro mostró un hilo del juego girando sin fin en `sub_8215E5E8`, la
   búsqueda por nombre en el pool de memoria de 0x82A2E0E0: sus bucles solo paran en una

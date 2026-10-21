@@ -4,6 +4,15 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.22 (2026-10-21)
+
+- Challenge Series: all completed now really completes them: each event the
+  series screen lists gets the game's own completed bit in its record, and the
+  game recounts. Locks ("beat challenge 3 or 4") and the count follow when the
+  screen is opened again, and the game saves them like a win.
+- When the panel refuses 60 Hz, the surface also votes for 120 Hz instead of
+  60 fps content (the vivo X300 Pro took 120 and dropped back to 90).
+
 ## v0.1.21 (2026-10-21)
 
 - Challenge Series: all completed now turns on: one of its code guards had a

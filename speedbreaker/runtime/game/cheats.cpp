@@ -7,11 +7,14 @@
 #include <kernel/function.h>
 #include <kernel/vmem.h>
 #include <user/paths.h>
+#include <atomic>
 #include <fstream>
 
 extern "C" PPC_FUNC(__imp__sub_82337760);
 extern "C" PPC_FUNC(__imp__sub_822E8D48);
 extern "C" PPC_FUNC(__imp__sub_82337198);
+extern "C" PPC_FUNC(__imp__sub_8256A940);
+extern "C" PPC_FUNC(__imp__sub_82335F90);
 namespace {
 bool s_cash=false;
 // Unlimited money, all cars, Challenge Series stars (Initialize; read-only after).
@@ -74,16 +77,30 @@ bool CarCode() {
 }
 // Challenge Series stars: sub_82337198(manager, event, mask) answers whether
 // an event's flags have the mask; the Challenge Series screen asks it with
-// mask 1 (completed) for each event (call at 8256AAF0, li r5,1 at 8256AAE0),
-// and the career check that grants the series' reward asks the same (call at
-// 82364C24, li r5,1 at 82364C18). Only those two callers get "completed":
-// nothing is written into the event records.
+// mask 1 (completed) for each of its events (call at 8256AAF0, li r5,1 at
+// 8256AAE0), and the career check that grants the series' reward asks the
+// same (call at 82364C24, li r5,1 at 82364C18).
+//
+// Answering "completed" alone (0.1.16) only drew the stars: the screen's
+// locks (sub_822E8CC8, "beat challenge 3 or 4") and its count (5/69) read the
+// records themselves. So for each event the screen asks about, the event's
+// own record (the 16-byte entries at [manager+60], [manager+0] of them, the
+// id at +0, the flags at +4) gets the game's completed bit, 1, as finishing it
+// would; and once the screen is built (sub_8256A940), the game recounts
+// (sub_82335F90(manager), its bin counters). Only records the game's own
+// lookup already holds are touched: nothing is added past the table. The game
+// saves the profile as after a win, so it is kept.
 constexpr uint32_t kStarsScreen=0x8256AAF4, kStarsReward=0x82364C28;
+constexpr uint32_t kChallengeManager=0x82A2CB1C;  // lwz r3,-13540(r27) in the screen
+std::atomic<bool> s_starsMarked{false};
 bool StarsCode() {
     // li r5,1 and bl 82337198 at both callers; the query's own loads of the
     // table (lwz r8,0(r3); lwz r11,60(r3)) and its mask test (and r10,r11,r5).
     return Matches({{0x8256AAE0,0x38A00001},{0x8256AAF0,0x4BDCC6A9},{0x82364C18,0x38A00001},{0x82364C24,0x4BFD2575},
-        {0x82337198,0x81030000},{0x823371A0,0x8163003C},{0x823371D8,0x7D6A2838}});
+        {0x82337198,0x81030000},{0x823371A0,0x8163003C},{0x823371D8,0x7D6A2838},
+        // The screen loads the manager [82A2CB1C] (lis r27,-32093; lwz r3,-13540(r27))
+        // and the recount takes it in r3 (mflr r12 ... mr r29,r3; lwz r11,32(r29)).
+        {0x8256A960,0x3F6082A3},{0x8256A96C,0x807BCB1C},{0x82335F90,0x7D8802A6},{0x82335F9C,0x7C7D1B78},{0x82335FA4,0x817D0020}});
 }
 }
 namespace game::cheats {
@@ -161,9 +178,37 @@ PPC_FUNC(sub_822E8D48) {
     if(s_cars)ctx.r3.u64=1;
 }
 PPC_FUNC(sub_82337198) {
-    const uint32_t caller=uint32_t(ctx.lr);
+    const uint32_t caller=uint32_t(ctx.lr), manager=ctx.r3.u32, event=ctx.r4.u32, mask=ctx.r5.u32;
     __imp__sub_82337198(ctx,base);
-    if(s_stars && (caller==kStarsScreen || caller==kStarsReward))ctx.r3.u64=1;
+    if(!s_stars || (caller!=kStarsScreen && caller!=kStarsReward))return;
+    ctx.r3.u64=1;
+    if(caller!=kStarsScreen || mask!=1 || !event || !Writable(manager) || !Writable(manager+60))return;
+    // This event's record, found as the game's own lookup does (bounded by the count).
+    const uint32_t count=Word(manager), table=Word(manager+60);
+    if(count>4096)return;
+    for(uint32_t i=0;i<count;i++) {
+        const uint32_t record=table+i*16;
+        if(!Writable(record) || !Writable(record+4))return;
+        if(Word(record)!=event)continue;
+        const uint32_t flags=Word(record+4);
+        if(!(flags&1)) {
+            *static_cast<uint32_t*>(g_memory.Translate(record+4))=ByteSwap(flags|1);
+            if(!s_starsMarked.exchange(true))fprintf(stderr,"[cheats] Challenge Series: marking events completed (event %08X first)\n",event);
+        }
+        return;
+    }
+}
+PPC_FUNC(sub_8256A940) {
+    __imp__sub_8256A940(ctx,base);
+    if(!s_stars || !s_starsMarked.exchange(false))return;
+    // The screen marked events: the game's own recount, as after a race.
+    const uint32_t manager=Word(kChallengeManager);
+    if(!Writable(manager))return;
+    const uint64_t r3=ctx.r3.u64,r4=ctx.r4.u64,r5=ctx.r5.u64;
+    ctx.r3.u64=manager;
+    __imp__sub_82335F90(ctx,base);
+    ctx.r3.u64=r3;ctx.r4.u64=r4;ctx.r5.u64=r5;
+    fprintf(stderr,"[cheats] Challenge Series: recounted; reopen the screen to see the locks lifted\n");
 }
 PPC_FUNC(sub_82337760) {
     const uint32_t caller=uint32_t(ctx.lr), profile=ctx.r31.u32;
