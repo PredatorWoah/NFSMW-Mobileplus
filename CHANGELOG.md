@@ -35,6 +35,11 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: nitro y SpeedBreaker ilimitados en CHEATS** (0.1.15). Dos banderas de datos que
+  el código de los medidores del juego USA ya lee (`0x82A2CE71`, `0x82A2D1C6`, del análisis de
+  Codex, comprobado contra el código generado): activas, el medidor no se vacía. Se escriben al
+  arrancar solo si las instrucciones alrededor de ambas lecturas son las esperadas.
+
 - **SpeedBreaker: aviso de actualización en el lanzador.** Al abrirse (como mucho cada 6 h) y con
   **Check for updates**, lee `speedbreaker/update/latest.json` de este repositorio: solo el
   paquete, la versión, las notas y dónde está. El APK, que lleva el juego recompilado, nunca se

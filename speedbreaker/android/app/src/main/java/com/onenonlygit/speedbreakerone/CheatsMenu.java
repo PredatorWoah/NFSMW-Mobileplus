@@ -104,6 +104,18 @@ final class CheatsMenu {
         edition.setChecked(read(new File(cheatsFile().getParentFile(),"cheats.txt")).contains("black_edition"));
         boxes.add(edition);list.addView(edition);
         list.addView(note("Uses the USA game's bonus-content flag, not a different executable. You reported this working. Apply with Save & Restart; disable and restart to stop applying the flag. Unlocks already saved by the game may remain."));
+        List<String> startup=read(new File(cheatsFile().getParentFile(),"cheats.txt"));
+        list.addView(heading("Unlimited meters"));
+        for (String[] m : new String[][] {
+                {"infinite_nitro", "Unlimited nitro"},
+                {"infinite_speedbreaker", "Unlimited SpeedBreaker"}}) {
+            CheckBox box=new CheckBox(activity);
+            box.setText(m[1]);
+            box.setTag(m[0]);
+            box.setChecked(startup.contains(m[0]));
+            boxes.add(box);list.addView(box);
+        }
+        list.addView(note("The USA game's own debug flags: an active meter keeps its charge instead of draining. It must have charge to start, and a car without NOS gets none. Apply with Save & Restart; turn off and restart to drain normally again."));
         Button selected = new Button(activity);
         selected.setText("Enter selected at title screen");
         selected.setOnClickListener(v -> {

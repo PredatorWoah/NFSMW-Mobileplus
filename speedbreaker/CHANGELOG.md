@@ -4,6 +4,13 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.15 (2026-10-21)
+
+- CHEATS: Unlimited nitro and Unlimited SpeedBreaker. The USA game's own meter
+  code reads two data flags (82A2CE71, 82A2D1C6); when set, an active meter
+  keeps its charge. Written at startup after checking the code around both
+  loads; apply with Save & Restart.
+
 ## v0.1.14 (2026-10-21)
 
 - Power Hints follow the Frame Rate setting for their target instead of the
