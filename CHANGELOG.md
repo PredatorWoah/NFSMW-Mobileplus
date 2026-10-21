@@ -35,6 +35,14 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: dinero ilimitado, todos los coches y la Challenge Series completa en CHEATS**
+  (0.1.16), del análisis de Codex comprobado contra el código generado. Dinero: cada fotograma,
+  en el hilo de render del juego, el dinero del perfil (`[[0x82A2C684]+0x10]+0xBC`, punteros
+  validados) vuelve a 100.000.000. Coches: la bandera de desbloqueo general `0x82A2CE00` y la
+  consulta de coche `sub_822E8D48` respondiendo "desbloqueado". Estrellas: `sub_82337198`
+  responde "completado" solo a la pantalla de la Challenge Series y a su comprobación de
+  recompensa; no se escribe ningún registro de evento.
+
 - **SpeedBreaker: nitro y SpeedBreaker ilimitados en CHEATS** (0.1.15). Dos banderas de datos que
   el código de los medidores del juego USA ya lee (`0x82A2CE71`, `0x82A2D1C6`, del análisis de
   Codex, comprobado contra el código generado): activas, el medidor no se vacía. Se escriben al

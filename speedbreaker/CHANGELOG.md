@@ -4,6 +4,14 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.16 (2026-10-21)
+
+- CHEATS: Unlimited money (cash topped back up to 100,000,000 each frame on
+  the game's render thread), Unlock all cars (the game's unlock-all flag plus
+  the car query answering "unlocked") and Challenge Series: all completed (the
+  series screen and its reward check see every event completed; no event record
+  is written). Each checks the USA game's code first.
+
 ## v0.1.15 (2026-10-21)
 
 - CHEATS: Unlimited nitro and Unlimited SpeedBreaker. The USA game's own meter
