@@ -72,7 +72,7 @@ final class CheatsMenu {
 
     // Start-up cheats: id (runtime/game/cheats.cpp), label, what it does.
     private static final String[][] STARTUP = {
-        {"black_edition", "Black Edition content", "The Collector's Edition bonus cars and races (Xenia's patch for this disc). Experimental."},
+        {"black_edition", "Black Edition content", "The Collector's Edition bonus cars and races (Xenia's patch for this disc)."},
     };
 
     // The number finder, in libmain (cheat_finder.cpp): match count, or the

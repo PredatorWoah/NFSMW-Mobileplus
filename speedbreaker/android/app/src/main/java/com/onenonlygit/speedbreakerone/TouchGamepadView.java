@@ -24,7 +24,8 @@ import java.util.ArrayList;
  *           LB RB LT RT, BACK and START.
  *
  * The bar at the top switches between them at any time, opens the editor for
- * the one shown (drag, SIZE − / +, SAVE, RESET, CANCEL) and the CHEATS menu.
+ * the one shown (drag, SIZE − / +, SAVE, RESET, CANCEL), the CHEATS menu and
+ * SpeedBreaker's own SETTINGS (frame rate, quality: Back + Start).
  * Layouts are saved as fractions of the screen, per layout
  * (touch_layout_racing, touch_layout_xbox); the one shown, in touch_layouts.
  *
@@ -193,6 +194,7 @@ final class TouchGamepadView extends View {
     private RectF layoutButton() {float w=getWidth(),h=getHeight();return new RectF(w*.38f,h*.025f,w*.62f,h*.105f);}
     private RectF editButton() {float w=getWidth(),h=getHeight();return new RectF(w*.755f,h*.025f,w*.855f,h*.105f);}
     private RectF cheatsButton() {float w=getWidth(),h=getHeight();return new RectF(w*.87f,h*.025f,w*.975f,h*.105f);}
+    private RectF settingsButton() {float w=getWidth(),h=getHeight();return new RectF(w*.025f,h*.025f,w*.145f,h*.105f);}
     private RectF tool(int i) {
         float w=getWidth(),h=getHeight(),x=w*(.19f+i*.125f);
         return new RectF(x,h*.025f,x+w*.115f,h*.115f);
@@ -255,6 +257,11 @@ final class TouchGamepadView extends View {
             if(layoutButton().contains(x,y)){switchLayout();return true;}
             if(editButton().contains(x,y)){startEditor();return true;}
             if(onCheats!=null && cheatsButton().contains(x,y)){reset();onCheats.run();return true;}
+            if(!preview && settingsButton().contains(x,y)) {
+                // SpeedBreaker's own settings (frame rate, quality...): its Back + Start
+                // chord (ui/ui.cpp), pressed briefly, then released from the fingers' state.
+                reset();send(BACK|START,0,0,0,0,0,0);postDelayed(this::publish,150);return true;
+            }
         }
         if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_POINTER_DOWN) {
             Control c=hit(event.getX(index),event.getY(index));
@@ -347,6 +354,7 @@ final class TouchGamepadView extends View {
             barButton(canvas,layoutButton(),XBOX.equals(layoutName)?"XBOX LAYOUT ⇄ racing":"RACING LAYOUT ⇄ xbox");
             barButton(canvas,editButton(),"EDIT");
             if(onCheats!=null)barButton(canvas,cheatsButton(),"CHEATS");
+            if(!preview)barButton(canvas,settingsButton(),"SETTINGS");
         }
     }
 }
