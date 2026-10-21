@@ -10,6 +10,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: los informes de cuelgue y de fallo, y los zip de Save Bug Report, también
+  a Descargas** (`Download/SpeedBreaker-logs`). Antes solo se copiaban los `.log`, y el
+  `hang-*.txt` (dónde estaba cada hilo cuando el juego se paró) se quedaba en el almacenamiento
+  privado de la app. Cada uno se copia entero una vez; uno que dejó una sesión que se cayó, al
+  arrancar la siguiente.
+
 - **SpeedBreaker: dos disposiciones táctiles e icono** (ver
   [docs/speedbreaker.md](docs/speedbreaker.md#controles-táctiles)). RACING, rotulada por lo que
   hace: GAS (RT), BRAKE (LT), ◀ ▶ para girar, NITRO (B), HANDBRAKE (A), LOOK BACK (Y), SLOW

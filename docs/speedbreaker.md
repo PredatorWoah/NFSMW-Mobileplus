@@ -54,7 +54,8 @@ de flujo de control, los de predicados y los de BC.
   partida o sonda deja en `Download/SpeedBreaker-logs/` el logcat de la app, el registro nativo
   de la sesión (`files/data/speedbreaker/logs/<hora>.log`, que es adonde va su stderr) copiado según crece, y
   una línea `diag` cada 5 s (estado y margen térmico, batería, RAM libre, RSS, Hz y MHz de cada
-  núcleo). Al abrir el lanzador, si la partida anterior acabó mal, el motivo de Android, el
+  núcleo). También los informes de cuelgue y de fallo (`logs/hang-*.txt`, `logs/crash-*.txt`) y
+  los zip de **Save Bug Report**, enteros y una vez cada uno. Al abrir el lanzador, si la partida anterior acabó mal, el motivo de Android, el
   logcat que quedaba y el tombstone. Puesto por defecto; el botón **Logs to Downloads** del
   lanzador lo apaga.
 - **Pantalla a 60 Hz al jugar.** El juego va a 60 o 30 fps; en un panel a 90 Hz, como viene
