@@ -35,6 +35,14 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: lanzador con aspecto de juego, negro y dorado** (0.1.17). El icono y el título
+  del propio disco del jugador (el recurso XDBF de su `default.xex`, que el proceso del juego
+  guarda en `title-icon.png`/`title.txt`, `runtime/user/title_art.cpp`), un gran botón RACE
+  (RESUME con el juego abierto), RESTART, GARAGE y CONTROLS, y una insignia de actualización.
+  El Garage reúne driver de GPU, registros, 60 Hz, actualizaciones y **Add to home screen**: un
+  acceso directo con el icono del disco que va directo a la carrera. Mando: cruceta, A y B.
+  Nada del juego va en la app. Icono de la app en negro y dorado (`MwTheme.java`).
+
 - **SpeedBreaker: dinero ilimitado, todos los coches y la Challenge Series completa en CHEATS**
   (0.1.16), del análisis de Codex comprobado contra el código generado. Dinero: cada fotograma,
   en el hilo de render del juego, el dinero del perfil (`[[0x82A2C684]+0x10]+0xBC`, punteros

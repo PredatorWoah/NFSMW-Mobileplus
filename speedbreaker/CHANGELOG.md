@@ -4,6 +4,17 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.17 (2026-10-21)
+
+- A game-like launcher, black and gold: the disc's own icon and title, a big
+  RACE (RESUME while the game runs) button, RESTART, GARAGE and CONTROLS, and an
+  update badge. The Garage holds the GPU driver, logs, 60 Hz and updates.
+- The game saves its dashboard icon and title from your default.xex (XDBF) for
+  the launcher; Garage > Add to home screen pins a shortcut with that icon that
+  goes straight to the race. Nothing of the game ships in the app.
+- Gamepad works in the launcher: d-pad to move, A to press, B to go back.
+- App icon restyled in black and gold.
+
 ## v0.1.16 (2026-10-21)
 
 - CHEATS: Unlimited money (cash topped back up to 100,000,000 each frame on

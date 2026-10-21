@@ -8,6 +8,7 @@ add_library(XenonUtilsLite STATIC
     ${XR}/XenonUtils/image.cpp
     ${XR}/XenonUtils/xex_patcher.cpp
     ${XR}/XenonUtils/memory_mapped_file.cpp
+    ${XR}/XenonUtils/xdbf_wrapper.cpp
     ${XR}/thirdparty/libmspack/libmspack/mspack/lzxd.c
     ${XR}/thirdparty/tiny-AES-c/aes.c)
 target_include_directories(XenonUtilsLite PUBLIC ${XR}/XenonUtils ${XR}/thirdparty/simde
