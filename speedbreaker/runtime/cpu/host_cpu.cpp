@@ -79,13 +79,16 @@ namespace hostcpu
         auto [low, high] = std::minmax_element(cpus.begin(), cpus.end(), [](const Cpu& a, const Cpu& b) { return a.speed < b.speed; });
         if (low->speed == 0)
             return;
-        std::vector<uint64_t> cores, fastCores;
+        std::vector<uint64_t> cores, fastCores, nearCores;
         for (const Cpu& c : cpus)
         {
             if (std::find(cores.begin(), cores.end(), c.core) == cores.end())
                 cores.push_back(c.core);
             if (c.speed * 100 >= high->speed * 95 && std::find(fastCores.begin(), fastCores.end(), c.core) == fastCores.end())
                 fastCores.push_back(c.core);
+            else if (c.speed * 100 >= high->speed * 80 && c.speed * 100 < high->speed * 95 &&
+                std::find(nearCores.begin(), nearCores.end(), c.core) == nearCores.end())
+                nearCores.push_back(c.core);
         }
         // A real split into fast and slow cores (the Steam Machine's slow
         // ones top out at 73%) needs at least two fast physical cores, so the
@@ -99,8 +102,14 @@ namespace hostcpu
         // weighs a core's size too; the Steam Frame's Cortex-X4, cpu 7, tops
         // out at 3.05 GHz to its A720s' 3.15 but does 20% more), then the
         // last (cpu 0's core stays shared; x86 has no cpu_capacity).
+        // A phone's lone prime core counts too when two or more cores come
+        // within 80% of it for the game's own threads: the vivo X300 Pro's
+        // Dimensity 9500 has one 4.21 GHz core (cpu 7), three at 3.5 and four
+        // at 2.7. Without it the command processor floated onto the 3.5 GHz
+        // cores, which heat capped to 2.2 (19 ms a frame, Auto dropped to 30
+        // at 6 min), while cpu 7 idled.
         bool split = low->speed * 100 <= high->speed * 85;
-        if (split ? cpus.size() < 6 || fastCores.size() < 2 : fastOnly || cores.size() < 4)
+        if (split ? cpus.size() < 6 || (fastCores.size() < 2 && nearCores.size() < 2) : fastOnly || cores.size() < 4)
             return;
         uint64_t core = 0, capacity = 0;
         for (const Cpu& c : cpus)
