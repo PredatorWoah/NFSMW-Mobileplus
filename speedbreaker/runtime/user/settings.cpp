@@ -85,14 +85,18 @@ namespace settings
 
         // An iOS app always has the whole screen (video::FullscreenLocked):
         // the Fullscreen row would change nothing there.
-#if defined(__APPLE__) && TARGET_OS_IOS
-        constexpr bool kFullscreenHidden = true;
+#if (defined(__APPLE__) && TARGET_OS_IOS) || defined(__ANDROID__)
+        constexpr bool kFullscreenHidden = true;  // a phone's game is always full screen
 #else
         constexpr bool kFullscreenHidden = false;
 #endif
         // Screen Resolution scales an iOS view (Core Animation scales it up
         // to the screen); elsewhere the window's size is the player's.
-        constexpr bool kPresentScaleHidden = !kFullscreenHidden;
+#if defined(__APPLE__) && TARGET_OS_IOS
+        constexpr bool kPresentScaleHidden = false;
+#else
+        constexpr bool kPresentScaleHidden = true;
+#endif
 
         constexpr EnumEntry kAspectEntries[] = {
             { int32_t(AspectMode::Auto), "auto", "Fill Screen" },

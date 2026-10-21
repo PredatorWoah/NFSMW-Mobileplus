@@ -247,12 +247,14 @@ public final class SpeedBreakerActivity extends SDLActivity {
         float hz = display.getRefreshRate();
         String line;
         if (multipleOf60(hz)) {
+            getSharedPreferences("display_policy", MODE_PRIVATE).edit().remove("stuck_hz").apply();
             line = String.format(java.util.Locale.ROOT, "[display] panel at %.0f Hz (asked %.0f): even frame pacing", hz, sixtyHertz.getRefreshRate());
         } else if (!sixtyRefused) {
             sixtyRefused = true;
             line = String.format(java.util.Locale.ROOT, "[display] panel stayed at %.0f Hz (asked %.0f): asking for 120 Hz instead", hz, sixtyHertz.getRefreshRate());
             preferSixtyHertz();
         } else {
+            getSharedPreferences("display_policy", MODE_PRIVATE).edit().putFloat("stuck_hz", hz).apply();  // for the launcher
             line = String.format(java.util.Locale.ROOT, "[display] panel still at %.0f Hz: the system keeps it there. Set the phone's refresh rate to 60 or 120 Hz in its display settings, or Frame Rate 30 (90 Hz paces 30 evenly)", hz);
         }
         android.util.Log.i("SpeedBreakerOne", line);

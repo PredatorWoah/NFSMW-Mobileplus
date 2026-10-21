@@ -49,6 +49,13 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker hacia la 1.0** (0.1.23): el watchdog detecta una carga parada tras su pantalla
+  de carga animada (fotogramas sí, lecturas del disco y audio no, 30 s) y guarda su informe con
+  las pilas, en silencio; copias de seguridad de las partidas en cada arranque (las 5 últimas) y
+  **Restore save** en el Garage; Frame Rate **Auto** funciona en Android (lee el estado térmico,
+  AThermal); **Cool Preset** y **Quality Preset** en Graphics; Fullscreen oculto en Android; el
+  lanzador avisa de los 90 Hz forzados; el menú CHEATS en negro y dorado.
+
 - **SpeedBreaker: vibración y 120 Hz cuando no hay 60** (0.1.20). Un toque háptico al pulsar un
   botón táctil, y el rumble del propio juego en el motor del teléfono (el `Rumble` SDL del mando
   táctil → `TouchGamepadView.rumble`, en 16 intensidades); ambos se apagan en el Garage. Los

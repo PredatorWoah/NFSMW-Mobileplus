@@ -59,7 +59,7 @@ public final class LauncherActivity extends Activity {
     private android.view.View home, garage;
     private android.widget.ImageView art;
     private TextView title, running, badge;
-    private Button driverRow, logsRow, displayRow, updatesRow, shortcutRow, tapRow, rumbleRow;
+    private Button driverRow, logsRow, displayRow, updatesRow, shortcutRow, tapRow, rumbleRow, restoreRow;
     private MwTheme.Backdrop backdrop;
     private boolean backdropSet;
     private android.window.OnBackInvokedCallback garageBack;
@@ -166,9 +166,11 @@ public final class LauncherActivity extends Activity {
         tapRow.setOnClickListener(v -> { haptics.edit().putBoolean("tap", !haptics.getBoolean("tap", true)).commit(); refresh(); });
         rumbleRow = MwTheme.row(this);
         rumbleRow.setOnClickListener(v -> { haptics.edit().putBoolean("rumble", !haptics.getBoolean("rumble", true)).commit(); refresh(); });
+        restoreRow = MwTheme.row(this);
+        restoreRow.setOnClickListener(v -> restoreSave());
         Button back = MwTheme.secondary(this, "Back");
         back.setOnClickListener(v -> showGarage(false));
-        for (Button b : new Button[] {shortcutRow, tapRow, rumbleRow, driverRow, logsRow, displayRow, updatesRow}) {
+        for (Button b : new Button[] {shortcutRow, tapRow, rumbleRow, driverRow, logsRow, displayRow, restoreRow, updatesRow}) {
             LinearLayout.LayoutParams each = new LinearLayout.LayoutParams(-1, -2);
             each.topMargin = MwTheme.dp(this, 10);
             list.addView(b, each);
@@ -227,6 +229,74 @@ public final class LauncherActivity extends Activity {
     private String titleName() {
         try { return new String(java.nio.file.Files.readAllBytes(userFile("title.txt").toPath()), java.nio.charset.StandardCharsets.UTF_8).trim(); }
         catch (IOException e) { return ""; }
+    }
+
+    // --- Save backups (runtime/user/save_backup.cpp makes one at each game start).
+
+    private File[] saveBackups() {
+        File[] dirs = userFile("save-backups").listFiles(f -> f.isDirectory() && !f.getName().endsWith(".partial"));
+        if (dirs == null) return new File[0];
+        java.util.Arrays.sort(dirs, (a, b) -> b.getName().compareTo(a.getName()));  // newest first
+        return dirs;
+    }
+
+    private void restoreSave() {
+        File[] backups = saveBackups();
+        if (backups.length == 0) { error("No save backups yet. One is made each time the game starts."); return; }
+        String[] names = new String[backups.length];
+        for (int i = 0; i < backups.length; i++) names[i] = backups[i].getName().replace('_', ' ');
+        new AlertDialog.Builder(this).setTitle("Restore which save?").setItems(names, (d, which) ->
+            new AlertDialog.Builder(this).setMessage("Replace your current save with the one from " + names[which] + "?"
+                    + (gamePid() != 0 ? " The running game will be closed first (unsaved race progress is lost)." : "")
+                    + " Your current save is backed up again the next time the game starts.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Restore", (d2, w) -> restoreFrom(backups[which])).show()
+        ).setNegativeButton("Cancel", null).show();
+    }
+
+    private void restoreFrom(File backup) {
+        int pid = gamePid();
+        if (pid != 0) {
+            ActivityManager manager = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
+            for (ActivityManager.AppTask task : manager.getAppTasks()) {
+                android.content.ComponentName base = task.getTaskInfo().baseActivity;
+                if (base != null && base.getClassName().equals(SpeedBreakerActivity.class.getName())) task.finishAndRemoveTask();
+            }
+            Process.killProcess(pid);
+        }
+        new Thread(() -> {
+            for (int i = 0; i < 100 && gamePid() != 0; ++i) try { Thread.sleep(20); } catch (InterruptedException e) { return; }
+            File save = userFile("save"), old = userFile("save.replaced");
+            String failure = null;
+            try {
+                deleteTree(old);
+                if (save.exists() && !save.renameTo(old)) throw new IOException("Cannot move the current save aside.");
+                copyTree(backup, save);
+                deleteTree(old);
+            } catch (IOException e) {
+                failure = e.getMessage();
+                deleteTree(save);
+                old.renameTo(save);  // put the current one back
+            }
+            final String message = failure == null ? "Save restored from " + backup.getName().replace('_', ' ') + "." : "Restore failed: " + failure;
+            runOnUiThread(() -> { refresh(); error(message); });
+        }, "save-restore").start();
+    }
+
+    private static void copyTree(File from, File to) throws IOException {
+        if (from.isDirectory()) {
+            if (!to.isDirectory() && !to.mkdirs()) throw new IOException("Cannot create " + to.getName());
+            File[] children = from.listFiles();
+            if (children != null) for (File c : children) copyTree(c, new File(to, c.getName()));
+        } else {
+            java.nio.file.Files.copy(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private static void deleteTree(File f) {
+        File[] children = f.listFiles();
+        if (children != null) for (File c : children) deleteTree(c);
+        f.delete();
     }
 
     /** A home-screen shortcut with the disc's own icon that goes straight to the race. */
@@ -331,7 +401,9 @@ public final class LauncherActivity extends Activity {
         running.setText(BuildConfig.PLATFORM_PROBE ? "Test build: no game inside. It checks this phone and lets you edit the touch controls."
                 : live ? "● Game running" : icon == null ? "Pick your Most Wanted (USA) disc image on the first race" : "Ready");
         running.setTextColor(live ? MwTheme.GOLD : MwTheme.MUTED);
-        status.setText("SpeedBreaker One " + BuildConfig.VERSION_NAME + "  ·  GPU: " + prefs.getString("name", "System") + (importing ? "  ·  importing…" : ""));
+        float stuck = getSharedPreferences("display_policy", MODE_PRIVATE).getFloat("stuck_hz", 0);
+        status.setText((stuck > 0 ? String.format(java.util.Locale.ROOT, "The phone kept the screen at %.0f Hz last time: set 60 or 120 Hz in its display settings for smooth frames\n", stuck) : "")
+                + "SpeedBreaker One " + BuildConfig.VERSION_NAME + "  ·  GPU: " + prefs.getString("name", "System") + (importing ? "  ·  importing…" : ""));
         play.setText(BuildConfig.PLATFORM_PROBE ? "Run phone test" : live ? "Resume" : "Race");
         play.setEnabled(!importing);
         if (driverRow == null) return;
@@ -340,6 +412,8 @@ public final class LauncherActivity extends Activity {
         logsRow.setText("Logs to Downloads:  " + (DownloadsLog.enabled(this) ? "on (Download/SpeedBreaker-logs)" : "off"));
         displayRow.setText("60 Hz display request:  " + (displayPrefs.getBoolean("prefer60", true) ? "on" : "off"));
         updatesRow.setText("Check for updates  (" + BuildConfig.VERSION_NAME + ")");
+        File[] backups = saveBackups();
+        restoreRow.setText("Restore save:  " + (backups.length == 0 ? "no backups yet (made at each game start)" : backups.length + " backup" + (backups.length > 1 ? "s" : "") + ", newest " + backups[0].getName().replace('_', ' ')));
         SharedPreferences haptics = getSharedPreferences(TouchGamepadView.HAPTICS, MODE_PRIVATE);
         tapRow.setText("Touch button taps (haptics):  " + (haptics.getBoolean("tap", true) ? "on" : "off"));
         rumbleRow.setText("Game rumble on the phone:  " + (haptics.getBoolean("rumble", true) ? "on" : "off") + "  (crashes, nitro, rough roads)");

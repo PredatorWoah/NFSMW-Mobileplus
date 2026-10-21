@@ -41,6 +41,7 @@
 #include <kernel/function.h>
 #include <kernel/vmem.h>
 #include <cpu/guest_thread.h>
+#include <report/report.h>
 
 extern "C"
 {
@@ -425,6 +426,7 @@ namespace
         st.frame.assign(size_t(SAMPLES_PER_FRAME) * channels * 2, 0);
         st.frames++;
         s_stats.frames++;
+        report::g_audioFrames.fetch_add(1, std::memory_order_relaxed);  // the watchdog's stall check
         bool got = false;
         if (!s_silent && st.decoder)
         {

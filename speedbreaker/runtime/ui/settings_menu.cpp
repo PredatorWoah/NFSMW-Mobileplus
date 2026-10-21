@@ -38,6 +38,7 @@ namespace ui
         Id s_described = Id::Count;  // the row the help line describes
         bool s_describedBugReport = false;  // ...or Save Bug Report's
         bool s_describedUpdate = false;     // ...or Check for Updates'
+        int s_describedPreset = -1;         // ...or a Graphics preset's (Android)
         bool s_opened = true;        // just opened: take focus
 
         constexpr int kCategories = int(Category::Count);
@@ -296,6 +297,48 @@ namespace ui
                 report::SaveBugReport();
         }
 
+#ifdef __ANDROID__
+        // Graphics presets (Android): a phone's heat, not its speed, decides how
+        // long 60 fps lasts. Cool: no anti-aliasing (~0.75 ms of GPU a frame on a
+        // Mali-G1), 2x filtering, no sharpening, and Frame Rate Auto (30 while the
+        // phone is hot). Quality: the defaults back.
+        struct Preset
+        {
+            const char* id;
+            const char* label;
+            const char* help;
+            double antiAliasing, anisotropy, sharpening, frameRate;
+        };
+        constexpr Preset kPresets[] = {
+            { "preset-cool", "Cool Preset", "Less heat for longer 60 fps: anti-aliasing off, 2x texture filtering, no sharpening, "
+              "and Frame Rate Auto, which drops to 30 while the phone is hot. Change any of them afterwards as you like.",
+              0, 2, 0, settings::kFrameRateAuto },
+            { "preset-quality", "Quality Preset", "The sharpest picture: anti-aliasing on, automatic texture filtering, the default "
+              "sharpening, and a steady 60 fps (the phone gets warm sooner).",
+              1, settings::kAnisotropyAuto, 0.3, 60 },
+        };
+
+        void PresetRows(float valueWidth)
+        {
+            for (int i = 0; i < int(std::size(kPresets)); i++)
+            {
+                const Preset& p = kPresets[i];
+                bool described = false;
+                if (ActionRow(p.id, p.label, "Apply", valueWidth, described))
+                {
+                    settings::Set(Id::AntiAliasing, p.antiAliasing);
+                    settings::Set(Id::Anisotropy, p.anisotropy);
+                    settings::Set(Id::Sharpening, p.sharpening);
+                    settings::Set(Id::FrameRate, p.frameRate);
+                    fprintf(stderr, "[ui] %s applied\n", p.label);
+                    Toast(std::format("{} applied", p.label));
+                }
+                if (described)
+                    s_describedPreset = i;
+            }
+        }
+#endif
+
         // A (or a click) asks GitHub, and the dialog shows the answer.
         void UpdateRow(float valueWidth)
         {
@@ -383,6 +426,13 @@ namespace ui
 
         void HelpLine()
         {
+#ifdef __ANDROID__
+            if (s_describedPreset >= 0)
+            {
+                ImGui::TextWrapped("%s", kPresets[s_describedPreset].help);
+                return;
+            }
+#endif
             if (s_describedUpdate)
             {
                 UpdateRowHelp();
@@ -507,6 +557,7 @@ namespace ui
         s_described = Id::Count;
         s_describedBugReport = false;
         s_describedUpdate = false;
+        s_describedPreset = -1;
         if (ImGui::BeginTabBar("pages", ImGuiTabBarFlags_NoTooltip))
         {
             for (int c = 0; c < kCategories; c++)
@@ -566,6 +617,10 @@ namespace ui
                                 OptionRow(o, valueWidth, focusFirst);
                                 focusFirst = false;
                             }
+#ifdef __ANDROID__
+                        if (category == Category::Graphics)
+                            PresetRows(valueWidth);
+#endif
                         if (category == Category::Advanced)
                         {
                             BugReportRow(valueWidth);

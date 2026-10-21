@@ -12,6 +12,9 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#ifdef __ANDROID__
+#include <dlfcn.h>
+#endif
 
 namespace platform::thermal
 {
@@ -75,6 +78,41 @@ namespace platform::thermal
         }
     }
 
+#ifdef __ANDROID__
+    namespace
+    {
+        // Android's thermal status (AThermal, API 30, looked up at run time):
+        // none/light -> nominal, moderate -> fair, severe -> serious (Frame
+        // Rate Auto's "hot": the vivo X300 Pro throttles its clocks there),
+        // critical and up -> critical.
+        State ReadAndroid()
+        {
+            struct Api
+            {
+                void* (*acquire)() = nullptr;
+                int (*status)(void*) = nullptr;
+                void* manager = nullptr;
+            };
+            static Api api = [] {
+                Api a;
+                if (void* lib = dlopen("libandroid.so", RTLD_NOW))
+                {
+                    a.acquire = reinterpret_cast<void* (*)()>(dlsym(lib, "AThermal_acquireManager"));
+                    a.status = reinterpret_cast<int (*)(void*)>(dlsym(lib, "AThermal_getCurrentThermalStatus"));
+                    if (a.acquire && a.status)
+                        a.manager = a.acquire();
+                }
+                return a;
+            }();
+            if (!api.manager)
+                return State::Unknown;
+            const int status = api.status(api.manager);
+            return status < 0 ? State::Unknown : status <= 1 ? State::Nominal : status == 2 ? State::Fair
+                : status == 3 ? State::Serious : State::Critical;
+        }
+    }
+#endif
+
     State Current()
     {
         return s_state.load(std::memory_order_relaxed);
@@ -106,6 +144,8 @@ namespace platform::thermal
         State state = State::Unknown;
 #ifdef __APPLE__
         state = detail::ReadSystem();
+#elif defined(__ANDROID__)
+        state = ReadAndroid();
 #endif
         bool simulated = false;
         for (const Change& c : Simulated())

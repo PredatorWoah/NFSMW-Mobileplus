@@ -150,23 +150,71 @@ final class CheatsMenu {
                 .setPositiveButton("Restart", (d,w) -> {if(save(boxes))restartGame();}).show());
         list.addView(restart);
 
-        list.addView(heading("Not available yet"));
+        list.addView(heading("Good to know"));
         list.addView(note("Every cheat checks the USA game's code first and stays off on any other executable (the session log says which are active). Apply with Save & Restart."));
 
+        style(list, restart);
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(list);
-        dialog[0] = new AlertDialog.Builder(activity).setTitle("Cheats").setView(scroll)
+        TextView title = MwTheme.text(activity, "CHEATS", 26, MwTheme.GOLD, MwTheme.DISPLAY);
+        title.setPadding(pad16 + pad16 / 2, pad16, pad16, 0);
+        dialog[0] = new AlertDialog.Builder(activity).setCustomTitle(title).setView(scroll)
                 .setNegativeButton("Close", null).create();
+        dialog[0].setOnShowListener(d -> {
+            // The launcher's look (MwTheme): black, a gold edge, gold buttons.
+            android.graphics.drawable.GradientDrawable frame = new android.graphics.drawable.GradientDrawable();
+            frame.setColor(MwTheme.BLACK);
+            frame.setStroke(MwTheme.dp(activity, 2), MwTheme.GOLD);
+            frame.setCornerRadius(MwTheme.dp(activity, 8));
+            dialog[0].getWindow().setBackgroundDrawable(frame);
+            Button close = dialog[0].getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (close != null) { close.setTextColor(MwTheme.GOLD); close.setTypeface(MwTheme.DISPLAY); }
+        });
         shown=dialog[0];
         dialog[0].setOnDismissListener(d -> {if(shown==dialog[0])shown=null;});
         dialog[0].show();
     }
+
+    /** Black and gold, like the launcher: gold headings, muted notes, gold checkboxes, slanted buttons. */
+    private void style(LinearLayout list, Button primary) {
+        android.content.res.ColorStateList gold = android.content.res.ColorStateList.valueOf(MwTheme.GOLD);
+        for (int i = 0; i < list.getChildCount(); i++) {
+            android.view.View v = list.getChildAt(i);
+            if (v instanceof CheckBox) {
+                CheckBox box = (CheckBox) v;
+                box.setTextColor(MwTheme.TEXT);
+                box.setButtonTintList(gold);
+                box.setTypeface(MwTheme.BODY);
+                box.setTextSize(16);
+            } else if (v instanceof Button) {
+                Button b = (Button) v;
+                Button styled = v == primary ? MwTheme.primary(activity, b.getText().toString()) : MwTheme.secondary(activity, b.getText().toString());
+                b.setBackground(styled.getBackground());
+                b.setTextColor(styled.getCurrentTextColor());
+                b.setTypeface(MwTheme.DISPLAY);
+                b.setAllCaps(!b.getText().toString().contains("\n"));  // a code's two lines keep their case
+                b.setTextSize(v == primary ? 20 : 15);
+                b.setStateListAnimator(null);
+                b.setMinHeight(MwTheme.dp(activity, 52));
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+                lp.topMargin = MwTheme.dp(activity, 8);
+                b.setLayoutParams(lp);
+            } else if (v instanceof TextView) {
+                TextView t = (TextView) v;
+                if (t.getTag() == HEADING) { t.setTextColor(MwTheme.GOLD); t.setTypeface(MwTheme.DISPLAY); t.setAllCaps(true); }
+                else { t.setTextColor(MwTheme.MUTED); t.setTypeface(MwTheme.BODY); }
+            }
+        }
+    }
+
+    private static final Object HEADING = new Object();
 
     private TextView heading(String text) {
         TextView t = new TextView(activity);
         t.setText(text);
         t.setTextSize(18);
         t.setPadding(0, (int) (12 * activity.getResources().getDisplayMetrics().density), 0, 0);
+        t.setTag(HEADING);
         return t;
     }
 
