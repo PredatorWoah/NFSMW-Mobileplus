@@ -35,6 +35,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: vibración y 120 Hz cuando no hay 60** (0.1.20). Un toque háptico al pulsar un
+  botón táctil, y el rumble del propio juego en el motor del teléfono (el `Rumble` SDL del mando
+  táctil → `TouchGamepadView.rumble`, en 16 intensidades); ambos se apagan en el Garage. Los
+  60 Hz se comprueban 2 s después: si el panel sigue en una frecuencia que 60 no divide (los
+  90 Hz del vivo X300 Pro), se pide el modo de 120 Hz; cada paso va al registro (`[display]`).
+
 - **SpeedBreaker: la portada del juego en HD** (0.1.19), solo en el APK privado del dueño desde
   `private/cover.jpg` (ignorado por git; `prepare_disc_icon.sh`): el icono de la app es su
   cuadrado superior (el logo y el M3 GTR), el lanzador lo muestra en el marco dorado y la portada

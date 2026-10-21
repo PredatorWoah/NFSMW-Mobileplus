@@ -59,7 +59,7 @@ public final class LauncherActivity extends Activity {
     private android.view.View home, garage;
     private android.widget.ImageView art;
     private TextView title, running, badge;
-    private Button driverRow, logsRow, displayRow, updatesRow, shortcutRow;
+    private Button driverRow, logsRow, displayRow, updatesRow, shortcutRow, tapRow, rumbleRow;
     private MwTheme.Backdrop backdrop;
     private boolean backdropSet;
     private android.window.OnBackInvokedCallback garageBack;
@@ -160,14 +160,20 @@ public final class LauncherActivity extends Activity {
         updatesRow.setOnClickListener(v -> UpdateCheck.check(this, true));
         shortcutRow = MwTheme.row(this);
         shortcutRow.setOnClickListener(v -> pinShortcut());
+        // Haptics (TouchGamepadView): a tick per button press, and the game's rumble on the phone.
+        SharedPreferences haptics = getSharedPreferences(TouchGamepadView.HAPTICS, MODE_PRIVATE);
+        tapRow = MwTheme.row(this);
+        tapRow.setOnClickListener(v -> { haptics.edit().putBoolean("tap", !haptics.getBoolean("tap", true)).commit(); refresh(); });
+        rumbleRow = MwTheme.row(this);
+        rumbleRow.setOnClickListener(v -> { haptics.edit().putBoolean("rumble", !haptics.getBoolean("rumble", true)).commit(); refresh(); });
         Button back = MwTheme.secondary(this, "Back");
         back.setOnClickListener(v -> showGarage(false));
-        for (Button b : new Button[] {shortcutRow, driverRow, logsRow, displayRow, updatesRow}) {
+        for (Button b : new Button[] {shortcutRow, tapRow, rumbleRow, driverRow, logsRow, displayRow, updatesRow}) {
             LinearLayout.LayoutParams each = new LinearLayout.LayoutParams(-1, -2);
             each.topMargin = MwTheme.dp(this, 10);
             list.addView(b, each);
         }
-        TextView help = MwTheme.text(this, "GPU driver: System, or an ARM64 Turnip ZIP with meta.json. Driver and display changes apply to a new game process; Resume keeps the running one.",
+        TextView help = MwTheme.text(this, "GPU driver: System, or an ARM64 Turnip ZIP with meta.json. Driver, display and haptics changes apply to a new game process; Resume keeps the running one.",
                 13, MwTheme.MUTED, MwTheme.BODY);
         help.setPadding(0, MwTheme.dp(this, 14), 0, MwTheme.dp(this, 6));
         list.addView(help);
@@ -334,6 +340,9 @@ public final class LauncherActivity extends Activity {
         logsRow.setText("Logs to Downloads:  " + (DownloadsLog.enabled(this) ? "on (Download/SpeedBreaker-logs)" : "off"));
         displayRow.setText("60 Hz display request:  " + (displayPrefs.getBoolean("prefer60", true) ? "on" : "off"));
         updatesRow.setText("Check for updates  (" + BuildConfig.VERSION_NAME + ")");
+        SharedPreferences haptics = getSharedPreferences(TouchGamepadView.HAPTICS, MODE_PRIVATE);
+        tapRow.setText("Touch button taps (haptics):  " + (haptics.getBoolean("tap", true) ? "on" : "off"));
+        rumbleRow.setText("Game rumble on the phone:  " + (haptics.getBoolean("rumble", true) ? "on" : "off") + "  (crashes, nitro, rough roads)");
         shortcutRow.setText("Add to home screen" + (icon == null ? "  (start the game once first)" : "  (a shortcut straight to the race)"));
     }
     private void play(boolean restart) {

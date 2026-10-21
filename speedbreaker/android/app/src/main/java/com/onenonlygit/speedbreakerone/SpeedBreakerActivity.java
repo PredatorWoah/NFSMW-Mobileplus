@@ -183,13 +183,17 @@ public final class SpeedBreakerActivity extends SDLActivity {
         android.view.Display display = getDisplay();
         if (display == null || mSurface == null) return;
         android.view.Display.Mode now = display.getMode(), best = null;
+        // Once the panel refused 60 (checkRefresh), the lowest multiple of 60 above it: 120.
+        float floor = sixtyRefused ? 61f : 0f;
         for (android.view.Display.Mode m : display.getSupportedModes()) {
             if (m.getPhysicalWidth() != now.getPhysicalWidth() || m.getPhysicalHeight() != now.getPhysicalHeight()) continue;
-            float times = m.getRefreshRate() / 60f;
-            boolean multiple = Math.round(times) >= 1 && Math.abs(times - Math.round(times)) < 0.02f;
-            if (multiple && (best == null || m.getRefreshRate() < best.getRefreshRate())) best = m;
+            if (m.getRefreshRate() < floor || !multipleOf60(m.getRefreshRate())) continue;
+            if (best == null || m.getRefreshRate() < best.getRefreshRate()) best = m;
         }
         if (best == null) return;
+        watchDisplay(display);
+        getWindow().getDecorView().removeCallbacks(refreshCheck);
+        getWindow().getDecorView().postDelayed(refreshCheck, 2000);
         sixtyHertz=best;
         applySixtyHertz();
         String chosen=String.format(java.util.Locale.ROOT,
@@ -219,6 +223,56 @@ public final class SpeedBreakerActivity extends SDLActivity {
     // and the surface's own rate with CHANGE_FRAME_RATE_ALWAYS, so the system
     // switches even when the change isn't seamless.
     private android.view.Display.Mode sixtyHertz;
+
+    // Did the panel take it? On the vivo X300 Pro it stayed at 90 Hz with 60 asked
+    // every way Android offers. 2 s after asking, the rate is read back; still not a
+    // multiple of 60, the 120 Hz mode is asked instead (each 60 fps frame then shows
+    // for exactly two refreshes: smooth, unlike 90's 2-1-2-1). Every step is logged.
+    private boolean sixtyRefused, displayWatched;
+    private final Runnable refreshCheck = this::checkRefresh;
+
+    private static boolean multipleOf60(float hz) {
+        float times = hz / 60f;
+        return Math.round(times) >= 1 && Math.abs(times - Math.round(times)) < 0.02f;
+    }
+
+    private void checkRefresh() {
+        android.view.Display display = getDisplay();
+        if (display == null || sixtyHertz == null) return;
+        float hz = display.getRefreshRate();
+        String line;
+        if (multipleOf60(hz)) {
+            line = String.format(java.util.Locale.ROOT, "[display] panel at %.0f Hz (asked %.0f): even frame pacing", hz, sixtyHertz.getRefreshRate());
+        } else if (!sixtyRefused) {
+            sixtyRefused = true;
+            line = String.format(java.util.Locale.ROOT, "[display] panel stayed at %.0f Hz (asked %.0f): asking for 120 Hz instead", hz, sixtyHertz.getRefreshRate());
+            preferSixtyHertz();
+        } else {
+            line = String.format(java.util.Locale.ROOT, "[display] panel still at %.0f Hz: the system keeps it there. Set this app's refresh rate in the phone's display settings", hz);
+        }
+        android.util.Log.i("SpeedBreakerOne", line);
+        DownloadsLog.note(line);
+    }
+
+    /** Every refresh-rate change of the panel while the game runs, in the log. */
+    private void watchDisplay(android.view.Display display) {
+        if (displayWatched) return;
+        displayWatched = true;
+        final int id = display.getDisplayId();
+        getSystemService(android.hardware.display.DisplayManager.class).registerDisplayListener(new android.hardware.display.DisplayManager.DisplayListener() {
+            private float last = display.getRefreshRate();
+            @Override public void onDisplayChanged(int changed) {
+                if (changed != id) return;
+                android.view.Display d = getDisplay();
+                float hz = d != null ? d.getRefreshRate() : last;
+                if (Math.abs(hz - last) < 0.5f) return;
+                DownloadsLog.note(String.format(java.util.Locale.ROOT, "[display] panel %.0f -> %.0f Hz", last, hz));
+                last = hz;
+            }
+            @Override public void onDisplayAdded(int added) { }
+            @Override public void onDisplayRemoved(int removed) { }
+        }, new android.os.Handler(android.os.Looper.getMainLooper()));
+    }
 
     private void applySixtyHertz() {
         if (sixtyHertz == null) return;

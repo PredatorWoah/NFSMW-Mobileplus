@@ -35,6 +35,26 @@ import java.util.ArrayList;
 final class TouchGamepadView extends View {
     private static native void nativeState(int buttons, float lx, float ly, float rx, float ry, float lt, float rt);
     private static native boolean nativeVisible();
+
+    // Haptics (launcher Garage, prefs "haptics"): a tick when a finger lands on a
+    // button, and the game's own rumble on the phone's motor (rumble(), called by
+    // the native touch pad's SDL rumble, runtime/platform/android/touch_gamepad.cpp).
+    static final String HAPTICS = "haptics";
+    private static android.os.Vibrator vibrator;
+    private static volatile boolean rumbleOn = true;
+    private static boolean hasAmplitude;
+    private boolean tapOn = true;
+
+    /** The game's rumble, 0..255 (0 stops). Any thread; the native side sends only changes. */
+    static void rumble(int amplitude) {
+        android.os.Vibrator v = vibrator;
+        if (v == null) return;
+        if (amplitude <= 0 || !rumbleOn) { v.cancel(); return; }
+        int a = hasAmplitude ? Math.max(1, Math.min(255, amplitude)) : android.os.VibrationEffect.DEFAULT_AMPLITUDE;
+        // Held until the next change: a repeating step, not a one-shot that runs out.
+        v.vibrate(android.os.VibrationEffect.createWaveform(new long[] {1000}, new int[] {a}, 0),
+                new android.os.VibrationAttributes.Builder().setUsage(android.os.VibrationAttributes.USAGE_MEDIA).build());
+    }
     /** Drives the virtual pad directly: CheatsMenu types the title-screen codes with it. */
     static void inject(int buttons, float lt, float rt) { nativeState(buttons,0,0,0,0,lt,rt); }
 
@@ -93,12 +113,23 @@ final class TouchGamepadView extends View {
         boolean hasSaved=!context.getSharedPreferences("touch_layout_v1",Context.MODE_PRIVATE).getAll().isEmpty();
         String active=settings.getString("active",hasSaved?SAVED:RACING);
         layoutName=XBOX.equals(active)?XBOX:SAVED.equals(active)?SAVED:RACING;
+        android.content.SharedPreferences haptics=context.getSharedPreferences(HAPTICS,Context.MODE_PRIVATE);
+        tapOn=haptics.getBoolean("tap",true);
+        if(!previewOnly) {
+            rumbleOn=haptics.getBoolean("rumble",true);
+            android.os.VibratorManager manager=context.getSystemService(android.os.VibratorManager.class);
+            vibrator=manager!=null?manager.getDefaultVibrator():null;
+            hasAmplitude=vibrator!=null && vibrator.hasAmplitudeControl();
+        }
     }
     /** The top bar's CHEATS button; without one it isn't drawn. */
     void setOnCheats(Runnable action) {onCheats=action;invalidate();}
     boolean canInject() {return !preview && running && nativeVisible();}
     void resume() {running=true;removeCallbacks(visibilityCheck);post(visibilityCheck);}
-    void pause() {running=false;removeCallbacks(visibilityCheck);reset();cancelEditor();}
+    void pause() {
+        if(!preview)rumble(0);  // never buzz on behind another app
+        running=false;removeCallbacks(visibilityCheck);reset();cancelEditor();
+    }
     void reset() {fingers.clear();for(Control c:controls){c.down=false;c.knobX=c.knobY=0;}send(0,0,0,0,0,0,0);invalidate();}
     private void send(int buttons,float lx,float ly,float rx,float ry,float lt,float rt) {
         if(!preview) nativeState(buttons,lx,ly,rx,ry,lt,rt);
@@ -290,7 +321,10 @@ final class TouchGamepadView extends View {
         if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_POINTER_DOWN) {
             Control c=hit(event.getX(index),event.getY(index));
             if(action==MotionEvent.ACTION_DOWN && c==null)return false;
-            if(c!=null)fingers.put(id,new Finger(c,event.getX(index),event.getY(index)));
+            if(c!=null) {
+                fingers.put(id,new Finger(c,event.getX(index),event.getY(index)));
+                tick();
+            }
         }
         for(int i=0;i<event.getPointerCount();++i) {
             Finger f=fingers.get(event.getPointerId(i));
@@ -299,13 +333,16 @@ final class TouchGamepadView extends View {
                 // Slide between the driving buttons without lifting the thumb.
                 if(f.control.kind==STEER_LEFT || f.control.kind==STEER_RIGHT) {
                     Control next=hit(f.x,f.y);
-                    if(next!=null && (next.kind==STEER_LEFT || next.kind==STEER_RIGHT))f.control=next;
+                    if(next!=null && (next.kind==STEER_LEFT || next.kind==STEER_RIGHT) && next!=f.control){f.control=next;tick();}
                 }
             }
         }
         if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_POINTER_UP)fingers.remove(id);
         publish();return true;
     }
+    /** A light tick for a press, as a key on the system keyboard (and the system's own haptics setting). */
+    private void tick() { if(tapOn)performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); }
+
     private void publish() {
         int buttons=0;float lt=0,rt=0,lx=0,ly=0,rx=0,ry=0;boolean left=false,right=false;
         for(Control c:controls){c.down=false;c.knobX=c.knobY=0;}

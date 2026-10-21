@@ -4,6 +4,17 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.20 (2026-10-21)
+
+- Haptics: a light tick when a finger lands on a touch button (and when the
+  thumb slides onto the other steering arrow), and the game's own rumble on the
+  phone's vibration motor through the touch pad's SDL rumble, in 16 strengths.
+  Both can be turned off in the Garage; Settings > Vibration still applies.
+- The 60 Hz request is checked 2 s later. If the panel stayed at a rate that
+  60 doesn't divide (the vivo X300 Pro's 90 Hz), the 120 Hz mode is asked
+  instead: each frame then shows for exactly two refreshes. Each step and every
+  panel rate change goes to the log as [display].
+
 ## v0.1.19 (2026-10-21)
 
 - The game's cover art in HD, built into the owner's private APK from
