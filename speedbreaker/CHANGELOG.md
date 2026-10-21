@@ -4,6 +4,14 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.13 (2026-10-21)
+
+- Fix for the freeze after a race: a game thread looped forever in a named
+  memory pool lookup (sub_8215E5E8) whose block chain or free-block rover had
+  gone bad. Each lookup now checks the pool first, puts a stray rover back at
+  the pool's start, and answers "not found" for a broken chain instead of never
+  returning. Every problem goes to the log as [pool-guard].
+
 ## v0.1.12 (2026-10-21)
 
 - Android power hints (ADPF): the CPU runs at the lowest clocks that still make
