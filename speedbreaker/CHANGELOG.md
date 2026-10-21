@@ -4,6 +4,14 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.24 (2026-10-21)
+
+- Long sessions no longer eat the phone's memory. The texture cache kept
+  every texture the game ever streamed in: 44 minutes of driving reached
+  6,950 textures in 3.8 GB (the app 6.5 GB). Now, over 1.5 GB, textures
+  nothing drew for 30 s are let go, the oldest first; one that comes back
+  loads again. The log says each time (`[texture-cache]`).
+
 ## v0.1.23 (2026-10-21)
 
 - Stall reports: when frames keep coming but nothing is read from the disc and

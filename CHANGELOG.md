@@ -21,6 +21,13 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: la memoria ya no crece sin fin** (0.1.24). Una sesión de 44 minutos en el
+  vivo X300 Pro llegó a 6,5 GB: la caché de texturas guardaba todas las que el juego cargaba
+  (6.950 texturas, 3,8 GB, ninguna liberada). Cada 10 s, si pasa de 1,5 GB, las texturas que
+  nada ha usado en 30 s se liberan, las más antiguas primero, hasta 3/4 del presupuesto; una
+  textura que vuelve a dibujarse se carga otra vez de la memoria del juego.
+  `NFSMW_TEXTURE_BUDGET_MB` lo ajusta (0 lo apaga). Registro: `[texture-cache]`.
+
 - **SpeedBreaker: la Challenge Series se completa de verdad** (0.1.22). Solo dibujar las
   estrellas no bastaba: los candados (`sub_822E8CC8`) y la cuenta (5/69) leen los registros.
   Ahora cada evento que la pantalla pregunta recibe el bit de completado del juego en su propio
