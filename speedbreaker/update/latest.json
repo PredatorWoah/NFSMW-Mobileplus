@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 21,
-  "versionName": "0.1.20",
-  "notes": "Haptics: a tick on every touch button press, and the game's own rumble (crashes, nitro, rough roads) on your phone's vibration motor; both switchable in the Garage. The 90 Hz fix: if vivo keeps the screen at 90 Hz, the game switches to 120 Hz for smooth 60 fps.",
+  "versionCode": 22,
+  "versionName": "0.1.21",
+  "notes": "Challenge Series: all completed now actually turns on (a safety check had one wrong word). Save Bug Report now includes where every thread is, so a stuck loading screen can be fixed.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
