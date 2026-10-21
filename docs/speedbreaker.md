@@ -58,6 +58,12 @@ de flujo de control, los de predicados y los de BC.
   los zip de **Save Bug Report**, enteros y una vez cada uno. Al abrir el lanzador, si la partida anterior acabó mal, el motivo de Android, el
   logcat que quedaba y el tombstone. Puesto por defecto; el botón **Logs to Downloads** del
   lanzador lo apaga.
+- **Pistas de rendimiento (ADPF)** (`runtime/platform/android/perf_hint.cpp`): el procesador
+  de comandos y `nfsmw-main` en una sesión de `APerformanceHint`; en cada swap se informa del
+  tiempo ocupado del procesador de comandos frente a un objetivo del 80 % del fotograma (13,3 ms
+  a 60 fps, 26,7 a 30), y en Android 15+ se pide eficiencia energética. Así el sistema elige los
+  relojes por el trabajo real y no por lo ocupados que parecen los hilos. Settings > Advanced >
+  **Power Hints** lo apaga en caliente; el registro dice una vez qué se montó (`[adpf] ...`).
 - **Pantalla a 60 Hz al jugar.** El juego va a 60 o 30 fps; en un panel a 90 Hz, como viene
   ese Vivo, ninguno divide el refresco y la imagen tiembla con los fps clavados. Se pide el modo
   de 60 Hz (o el múltiplo de 60 más bajo) y `Surface.setFrameRate(60)`.

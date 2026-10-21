@@ -49,10 +49,12 @@ namespace settings
         constexpr bool kGpuSchedulingHidden = false;
         constexpr int kGpuSchedulingDefault = 2;
         constexpr int kGpuWorkDefault = 1;
+        constexpr bool kPowerHintsHidden = false;
 #else
         constexpr bool kGpuSchedulingHidden = true;
         constexpr int kGpuSchedulingDefault = 0;
         constexpr int kGpuWorkDefault = 0;
+        constexpr bool kPowerHintsHidden = true;
 #endif
         constexpr EnumEntry kGpuSchedulingEntries[] = {
             { 0, "conservative", "Conservative" },
@@ -234,6 +236,10 @@ namespace settings
               .table = "advanced", .key = "depth_stage_reduction", .label = "Depth Stage Reduction",
               .description = "Remove unused shader outputs and safe fragment stages from depth draws. Keeps alpha-tested casters. Restart to compare.",
               .env = "SB_DEPTH_STAGE_REDUCTION", .defaultValue = kGpuWorkDefault },
+            { .id = Id::PowerHints, .category = Category::Advanced, .type = Type::Bool, .apply = Apply::Live, .hidden = kPowerHintsHidden,
+              .table = "advanced", .key = "power_hints", .label = "Power Hints",
+              .description = "Tell Android how long each frame's work takes, so it can run the CPU at the lowest clocks that still make 60 fps: less heat. Off: the system guesses.",
+              .env = "SB_POWER_HINTS", .defaultValue = 1 },
         };
         static_assert(std::size(kOptions) == kCount, "one row per settings::Id");
 

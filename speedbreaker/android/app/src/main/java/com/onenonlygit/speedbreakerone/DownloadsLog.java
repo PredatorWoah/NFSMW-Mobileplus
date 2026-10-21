@@ -275,12 +275,34 @@ final class DownloadsLog {
         if (display != null) s.append(String.format(Locale.ROOT, " hz=%.0f", display.getRefreshRate()));
         for (String l : read("/proc/self/status").split("\n"))
             if (l.startsWith("VmRSS:")) s.append(" rss=").append(number(l.replaceAll("[^0-9]", "")) >> 10).append("MB");
+        String gpu = gpuClock();
+        if (!gpu.isEmpty()) s.append(" gpu=").append(gpu);
         s.append(" mhz=");
         for (int c = 0; c < Runtime.getRuntime().availableProcessors(); c++) {
             long khz = number(read("/sys/devices/system/cpu/cpu" + c + "/cpufreq/scaling_cur_freq"));
             s.append(c == 0 ? "" : ",").append(khz < 0 ? "?" : String.valueOf(khz / 1000));
         }
         return s.toString();
+    }
+
+    // The GPU's clock where the kernel lets an app read it: MediaTek's GED
+    // (kHz or MHz, as the driver writes it), or a Mali devfreq node (Hz).
+    // Probed once; most phones refuse them all, and then nothing is added.
+    private static final String[] GPU_CLOCKS = {
+        "/sys/kernel/ged/hal/current_freqency", "/sys/kernel/ged/hal/current_frequency",
+        "/sys/class/misc/mali0/device/devfreq/mali0/cur_freq", "/sys/class/devfreq/mali0/cur_freq",
+        "/sys/class/devfreq/13000000.mali/cur_freq",
+    };
+    private String gpuClockPath;
+
+    private String gpuClock() {
+        if (gpuClockPath == null) {
+            gpuClockPath = "";
+            for (String p : GPU_CLOCKS) if (!read(p).isEmpty()) { gpuClockPath = p; break; }
+            diag("gpu clock: " + (gpuClockPath.isEmpty() ? "not readable" : gpuClockPath));
+        }
+        String v = gpuClockPath.isEmpty() ? "" : read(gpuClockPath).replaceAll("\\s+", " ");
+        return v.length() > 40 ? v.substring(0, 40) : v;
     }
 
     private static String header(Context ctx, String kind) {

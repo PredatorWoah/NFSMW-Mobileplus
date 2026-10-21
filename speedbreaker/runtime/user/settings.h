@@ -69,6 +69,7 @@ namespace settings
         GpuWorkReduction,
         PredicateCoalescing,
         DepthStageReduction,
+        PowerHints,    // Android only (platform/perf_hint.h)
         Count
     };
     constexpr size_t kCount = size_t(Id::Count);

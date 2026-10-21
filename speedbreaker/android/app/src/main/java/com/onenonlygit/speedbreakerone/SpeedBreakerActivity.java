@@ -57,6 +57,7 @@ public final class SpeedBreakerActivity extends SDLActivity {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        applySixtyHertz();
         if (touchControls != null) touchControls.resume();
     }
 
@@ -186,22 +187,42 @@ public final class SpeedBreakerActivity extends SDLActivity {
             if (multiple && (best == null || m.getRefreshRate() < best.getRefreshRate())) best = m;
         }
         if (best == null) return;
-        WindowManager.LayoutParams params = getWindow().getAttributes();
-        params.preferredDisplayModeId = best.getModeId();
-        getWindow().setAttributes(params);
+        sixtyHertz = best;
+        applySixtyHertz();
         String chosen = String.format(java.util.Locale.ROOT,
                 "[display] %dx%d@%.0f Hz for 60/30 fps (was %.0f Hz)", best.getPhysicalWidth(),
                 best.getPhysicalHeight(), best.getRefreshRate(), now.getRefreshRate());
         android.util.Log.i("SpeedBreakerOne", chosen);
         DownloadsLog.note(chosen);
         mSurface.getHolder().addCallback(new android.view.SurfaceHolder.Callback() {
-            @Override public void surfaceCreated(android.view.SurfaceHolder h) {
-                try { h.getSurface().setFrameRate(60f, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE); }
-                catch (IllegalArgumentException | IllegalStateException e) { android.util.Log.w("SpeedBreakerOne", "[display] setFrameRate: " + e); }
-            }
-            @Override public void surfaceChanged(android.view.SurfaceHolder h, int format, int w, int hgt) { }
+            @Override public void surfaceCreated(android.view.SurfaceHolder h) { surfaceFrameRate(h); }
+            @Override public void surfaceChanged(android.view.SurfaceHolder h, int format, int w, int hgt) { surfaceFrameRate(h); }
             @Override public void surfaceDestroyed(android.view.SurfaceHolder h) { }
         });
+    }
+
+    // The 60 Hz mode (preferSixtyHertz), asked again whenever the window comes
+    // back: on the vivo X300 Pro the panel stayed at 90 Hz through a whole
+    // session with the mode asked once. The mode id and the refresh rate both,
+    // and the surface's own rate with CHANGE_FRAME_RATE_ALWAYS, so the system
+    // switches even when the change isn't seamless.
+    private android.view.Display.Mode sixtyHertz;
+
+    private void applySixtyHertz() {
+        if (sixtyHertz == null) return;
+        WindowManager.LayoutParams params = getWindow().getAttributes();
+        params.preferredDisplayModeId = sixtyHertz.getModeId();
+        params.preferredRefreshRate = sixtyHertz.getRefreshRate();
+        getWindow().setAttributes(params);
+    }
+
+    private void surfaceFrameRate(android.view.SurfaceHolder h) {
+        try {
+            h.getSurface().setFrameRate(60f, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                    android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            android.util.Log.w("SpeedBreakerOne", "[display] setFrameRate: " + e);
+        }
     }
 
     public String gpuDriverDirectory() { String s=getIntent().getStringExtra("driver_dir"); return s==null?"":s; }
@@ -243,7 +264,7 @@ public final class SpeedBreakerActivity extends SDLActivity {
     }
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) hideSystemBars();
+        if (hasFocus) { hideSystemBars(); applySixtyHertz(); }
         if (touchControls != null) {
             if (hasFocus && resumed) touchControls.resume();
             else touchControls.pause();

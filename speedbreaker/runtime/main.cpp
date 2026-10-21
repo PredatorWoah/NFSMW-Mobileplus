@@ -20,6 +20,7 @@
 #include <hid/input.h>
 #include <cpu/guest_thread.h>
 #include <cpu/host_cpu.h>
+#include <platform/perf_hint.h>
 #include <install/install_cli.h>
 #include <install/locate.h>
 #include <install/placement.h>
@@ -185,6 +186,7 @@ namespace
         auto* params = static_cast<GuestMainParams*>(arg);
         GuestThread::SetDefaultStackSize(params->stackSize);
         SetHostThreadName("nfsmw-main");
+        perfhint::AddThisThread("game main thread");
         if (g_memory.FindFunction(params->entry) == nullptr)
         {
             fprintf(stderr, "[runtime] no recompiled function at the entry point\n");

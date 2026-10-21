@@ -6,6 +6,7 @@
 #include <kernel/vmem.h>
 #include <cpu/guest_thread.h>
 #include <cpu/host_cpu.h>
+#include <platform/perf_hint.h>
 #include <cpu/guest_time.h>
 #include <kernel/function.h>
 #include <video/presenter.h>
@@ -523,6 +524,9 @@ namespace gpu
                 static double worstMs = 0;
                 {
                     AccountBusy();
+                    static uint64_t swapBusyNs = 0;
+                    perfhint::FrameDone(renderer::g_cpBusyNs - swapBusyNs);
+                    swapBusyNs = renderer::g_cpBusyNs;
                     int64_t swapNow = guesttime::NowNs();
                     double frameMs = double(swapNow - lastSwap) / 1e6;
                     worstMs = std::max(worstMs, frameMs);
@@ -1066,6 +1070,7 @@ namespace gpu
             // scheduler left it on a 3.5 GHz core, or on the sibling of a
             // spinning game thread, while those held the 4.8 GHz cores.
             hostcpu::UseReservedCore("command processor");
+            perfhint::AddThisThread("command processor");
             GuestThreadContext thread(2);
             PPCContext& ctx = thread.ppcContext;
             renderer::Initialize(s_regs);
