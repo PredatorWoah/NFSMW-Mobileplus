@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 27,
-  "versionName": "0.1.26",
-  "notes": "The game's draw thread now runs on the phone's fastest core only (0.1.25 also allowed two slower ones), and Frame Rate Auto comes back to 60: after 3 minutes at 30 with the phone cool it tries 60 again.",
+  "versionCode": 28,
+  "versionName": "0.1.27",
+  "notes": "60 fps again, always: no more Auto drop to 30 (it goes back to 60 once with this update, and both presets use 60).",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
