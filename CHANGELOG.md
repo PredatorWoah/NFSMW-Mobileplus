@@ -21,6 +21,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: el procesador de comandos vuelve a tener su núcleo** (0.1.25). La regla que
+  reserva el núcleo más rápido pedía dos iguales; el Dimensity 9500 del vivo X300 Pro tiene uno
+  solo (cpu 7, 4,21 GHz), y el hilo de dibujo acababa en los de 3,5 GHz, que el calor limita a
+  2,2 (19 ms por fotograma, Auto a 30 a los 6 minutos) mientras cpu 7 estaba ociosa. Ahora basta
+  un núcleo principal con dos o más al 80 % de su velocidad para los demás hilos.
+
 - **SpeedBreaker: la memoria ya no crece sin fin** (0.1.24). Una sesión de 44 minutos en el
   vivo X300 Pro llegó a 6,5 GB: la caché de texturas guardaba todas las que el juego cargaba
   (6.950 texturas, 3,8 GB, ninguna liberada). Cada 10 s, si pasa de 1,5 GB, las texturas que

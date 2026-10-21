@@ -4,6 +4,14 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.25 (2026-10-21)
+
+- The command processor gets the phone's fastest core to itself again. On a
+  chip with one prime core (the vivo X300 Pro's 4.21 GHz cpu 7) the rule
+  that reserves it gave up, so the game's draw thread ran on the 3.5 GHz
+  cores, which heat caps first (19 ms a frame and 30 fps after 6 minutes)
+  while the prime core idled. The log says where it went (`[cpu]`).
+
 ## v0.1.24 (2026-10-21)
 
 - Long sessions no longer eat the phone's memory. The texture cache kept
