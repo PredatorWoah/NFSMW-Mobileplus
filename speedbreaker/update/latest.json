@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 14,
-  "versionName": "0.1.13",
-  "notes": "Fix for the freeze after a race: a game thread could loop forever in a memory pool lookup. The pool is now checked before each lookup and repaired or skipped, with [pool-guard] lines in the log. If it ever freezes again, send the hang report from Download/SpeedBreaker-logs.",
+  "versionCode": 15,
+  "versionName": "0.1.14",
+  "notes": "Fix for the freeze after a race (a memory pool lookup could loop forever; now checked and repaired, logged as [pool-guard]). Power Hints now aim for your Frame Rate setting: before, loads and hitches made them aim for 30 fps and Android slowed the CPU while the game ran at 60.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
