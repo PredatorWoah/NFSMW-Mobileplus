@@ -27,6 +27,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
   nada ha usado en 30 s se liberan, las más antiguas primero, hasta 3/4 del presupuesto; una
   textura que vuelve a dibujarse se carga otra vez de la memoria del juego.
   `NFSMW_TEXTURE_BUDGET_MB` lo ajusta (0 lo apaga). Registro: `[texture-cache]`.
+- **SpeedBreaker: menos tirones con el teléfono caliente** (0.1.24). En la misma sesión, a partir
+  de los 10 minutos (térmico SEVERE) el juego iba a 45-55 fps: con el panel forzado a 90 Hz cada
+  fotograma dura uno o dos refrescos al azar, y se ve a tirones aunque el contador marque 50-60.
+  Frame Rate es **Auto** por defecto en Android (30 estables mientras el teléfono está caliente,
+  tres refrescos exactos por fotograma), un 60 guardado pasa a Auto una vez con esta versión, y
+  el Quality Preset también usa Auto.
 
 - **SpeedBreaker: la Challenge Series se completa de verdad** (0.1.22). Solo dibujar las
   estrellas no bastaba: los candados (`sub_822E8CC8`) y la cuenta (5/69) leen los registros.

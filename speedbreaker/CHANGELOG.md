@@ -11,6 +11,13 @@ it's built into the game).
   6,950 textures in 3.8 GB (the app 6.5 GB). Now, over 1.5 GB, textures
   nothing drew for 30 s are let go, the oldest first; one that comes back
   loads again. The log says each time (`[texture-cache]`).
+- Less stutter once the phone is hot: Frame Rate is Auto on Android (60,
+  or a steady 30 while the phone is hot or can't hold 60), and a saved 60
+  becomes Auto once with this update (set 60 again in Settings > Display if
+  you prefer it). On a panel stuck at 90 Hz, 45-55 fps shows frames for one
+  refresh or two at random, which looks like stutter even with the counter
+  at 50-60; 30 shows every frame for exactly three. The Quality Preset uses
+  Auto too.
 
 ## v0.1.23 (2026-10-21)
 

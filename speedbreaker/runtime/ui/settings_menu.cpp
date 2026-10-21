@@ -301,7 +301,8 @@ namespace ui
         // Graphics presets (Android): a phone's heat, not its speed, decides how
         // long 60 fps lasts. Cool: no anti-aliasing (~0.75 ms of GPU a frame on a
         // Mali-G1), 2x filtering, no sharpening, and Frame Rate Auto (30 while the
-        // phone is hot). Quality: the defaults back.
+        // phone is hot). Quality: the defaults back (Auto too: 60 on a hot phone
+        // stutters, worst on a 90 Hz panel).
         struct Preset
         {
             const char* id;
@@ -314,8 +315,8 @@ namespace ui
               "and Frame Rate Auto, which drops to 30 while the phone is hot. Change any of them afterwards as you like.",
               0, 2, 0, settings::kFrameRateAuto },
             { "preset-quality", "Quality Preset", "The sharpest picture: anti-aliasing on, automatic texture filtering, the default "
-              "sharpening, and a steady 60 fps (the phone gets warm sooner).",
-              1, settings::kAnisotropyAuto, 0.3, 60 },
+              "sharpening, and Frame Rate Auto (60, or a steady 30 once the phone is hot; the phone gets warm sooner).",
+              1, settings::kAnisotropyAuto, 0.3, settings::kFrameRateAuto },
         };
 
         void PresetRows(float valueWidth)
