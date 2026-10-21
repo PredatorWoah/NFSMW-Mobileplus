@@ -80,6 +80,11 @@ final class DownloadsLog {
         current = d;
     }
 
+    /** A line of the app's own into the session file (not only logcat). */
+    static synchronized void note(String line) {
+        if (current != null) current.diag(line);
+    }
+
     /** From onDestroy, before the process is killed. */
     static synchronized void stop() {
         DownloadsLog d = current;
@@ -125,7 +130,7 @@ final class DownloadsLog {
             int tick = 0;
             while (!stopping) {
                 copyNativeLogs();
-                if (++tick % 5 == 0) Log.i(TAG, sample());
+                if (++tick % 5 == 0) diag(sample());
                 try { Thread.sleep(1000); } catch (InterruptedException e) { break; }
             }
             copyNativeLogs();
@@ -135,7 +140,7 @@ final class DownloadsLog {
     }
 
     private void finish() {
-        Log.i(TAG, "session end: " + sample());
+        diag("session end: " + sample());
         stopping = true;
         if (copyThread != null) { copyThread.interrupt(); join(copyThread, 2000); }
         if (logcat != null) logcat.destroy();
@@ -159,6 +164,16 @@ final class DownloadsLog {
         write("\n=== end " + stamp(new Date()) + " ===\n");
         close(out);
         for (OutputStream o : copies.values()) close(o);
+    }
+
+    /**
+     * A diag line straight into the file, and to logcat. Not only to logcat:
+     * in the game process the logcat stream delivered nothing on a Vivo X300
+     * Pro (Android 17) while the probe's did, so these lines were lost.
+     */
+    private void diag(String line) {
+        Log.i(TAG, line);
+        write(new java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.ROOT).format(new Date()) + " [diag] " + line + "\n");
     }
 
     /**
