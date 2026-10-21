@@ -10,6 +10,15 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: menos calor a 60 fps en Android.** Una sesión de pistas de rendimiento
+  (ADPF, `APerformanceHint`) con el procesador de comandos y el hilo principal del juego: cada
+  fotograma Android sabe cuánto trabajo hubo frente a un objetivo del 80 % del fotograma, y puede
+  bajar los relojes de la CPU al mínimo que llega a tiempo en vez de subirlos a ciegas; en Android
+  15+ pide además eficiencia energética. **Settings > Advanced > Power Hints** (encendido) lo
+  apaga en caliente para comparar. El modo de 60 Hz se vuelve a pedir al volver a la ventana y con
+  `CHANGE_FRAME_RATE_ALWAYS` (en un vivo X300 Pro el panel se quedaba a 90 Hz). La línea `diag`
+  añade el reloj de la GPU donde el núcleo deja leerlo.
+
 - **SpeedBreaker: los informes de cuelgue y de fallo, y los zip de Save Bug Report, también
   a Descargas** (`Download/SpeedBreaker-logs`). Antes solo se copiaban los `.log`, y el
   `hang-*.txt` (dónde estaba cada hilo cuando el juego se paró) se quedaba en el almacenamiento
