@@ -4,6 +4,13 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.14 (2026-10-21)
+
+- Power Hints follow the Frame Rate setting for their target instead of the
+  measured swaps: loads and hitches made them aim for 30 fps while the game ran
+  at 60, so Android slowed the CPU down exactly when frames were late.
+- Includes 0.1.13's fix for the freeze after a race.
+
 ## v0.1.13 (2026-10-21)
 
 - Fix for the freeze after a race: a game thread looped forever in a named
