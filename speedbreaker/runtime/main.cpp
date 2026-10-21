@@ -411,14 +411,6 @@ int main(int argc, char** argv)
         settings::SetDeviceDefault(settings::Id::FrameRate, older ? 30 : settings::kFrameRateAuto, "an iPhone, " + gpu);
     }
 #endif
-#ifdef __ANDROID__
-    // Frame Rate Auto on Android too. A vivo X300 Pro forces its panel to
-    // 90 Hz: 60 fps there shows frames for one refresh and two by turns, and
-    // once the phone is hot (SEVERE after ~10 min) the game runs 45-55, which
-    // its player saw as constant stutter while the counter said 50-60. 30
-    // lasts three refreshes, every frame, and Auto drops to it only then.
-    settings::SetDeviceDefault(settings::Id::FrameRate, settings::kFrameRateAuto, "Android");
-#endif
     bool settingsLoaded = settings::Load();
     // Which version ran last: a line in the log (so a bug report shows when a
     // problem began), the "What's new" note below, and this version recorded
@@ -432,14 +424,15 @@ int main(int argc, char** argv)
         if (versionChange != version::Change::Same)
             settings::RecordVersion(report::Version());
 #ifdef __ANDROID__
-        // Once, coming from before 0.1.24 (when 60 was the default and a
-        // saved file holds every option): a Frame Rate of 60 becomes Auto.
-        // Settings > Display > Frame Rate sets 60 again for good.
-        if (!last.empty() && version::Compare(last, "0.1.24") < 0 &&
-            settings::GetStoredValue(settings::Id::FrameRate) == 60)
+        // Once, coming from 0.1.24-0.1.26 (Android's Auto, and a saved 60
+        // switched to it): Auto becomes 60. Its 30 fps, even on a 120 Hz
+        // panel, was too choppy for the owner; 60 is the target, held longer
+        // by making frames cheaper. Auto stays a choice in the menu.
+        if (!last.empty() && version::Compare(last, "0.1.27") < 0 &&
+            settings::GetStoredValue(settings::Id::FrameRate) == settings::kFrameRateAuto)
         {
-            settings::Set(settings::Id::FrameRate, settings::kFrameRateAuto);
-            fprintf(stderr, "[frame rate] 60 -> Auto, once, coming from v%s (30 while the phone is hot or can't hold 60)\n", last.c_str());
+            settings::Set(settings::Id::FrameRate, 60);
+            fprintf(stderr, "[frame rate] Auto -> 60, once, coming from v%s\n", last.c_str());
             settings::Save();
         }
 #endif
