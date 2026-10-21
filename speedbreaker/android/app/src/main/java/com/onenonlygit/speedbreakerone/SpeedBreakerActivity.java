@@ -213,7 +213,12 @@ public final class SpeedBreakerActivity extends SDLActivity {
     }
     private void requestSurfaceRate(android.view.SurfaceHolder holder) {
         if(!holder.getSurface().isValid())return;
-        try {holder.getSurface().setFrameRate(60f,android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);}
+        // 60 fps content; once the panel refused 60 (checkRefresh), a vote for the 120 Hz
+        // mode itself, so nothing here argues for the 90 the system fell back to.
+        try {
+            if(sixtyRefused) holder.getSurface().setFrameRate(120f,android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT,android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);
+            else holder.getSurface().setFrameRate(60f,android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);
+        }
         catch(IllegalArgumentException|IllegalStateException e) {android.util.Log.w("SpeedBreakerOne","[display] setFrameRate: "+e);}
     }
 
@@ -248,7 +253,7 @@ public final class SpeedBreakerActivity extends SDLActivity {
             line = String.format(java.util.Locale.ROOT, "[display] panel stayed at %.0f Hz (asked %.0f): asking for 120 Hz instead", hz, sixtyHertz.getRefreshRate());
             preferSixtyHertz();
         } else {
-            line = String.format(java.util.Locale.ROOT, "[display] panel still at %.0f Hz: the system keeps it there. Set this app's refresh rate in the phone's display settings", hz);
+            line = String.format(java.util.Locale.ROOT, "[display] panel still at %.0f Hz: the system keeps it there. Set the phone's refresh rate to 60 or 120 Hz in its display settings, or Frame Rate 30 (90 Hz paces 30 evenly)", hz);
         }
         android.util.Log.i("SpeedBreakerOne", line);
         DownloadsLog.note(line);
