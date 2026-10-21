@@ -189,9 +189,11 @@ public final class SpeedBreakerActivity extends SDLActivity {
         WindowManager.LayoutParams params = getWindow().getAttributes();
         params.preferredDisplayModeId = best.getModeId();
         getWindow().setAttributes(params);
-        android.util.Log.i("SpeedBreakerOne", String.format(java.util.Locale.ROOT,
+        String chosen = String.format(java.util.Locale.ROOT,
                 "[display] %dx%d@%.0f Hz for 60/30 fps (was %.0f Hz)", best.getPhysicalWidth(),
-                best.getPhysicalHeight(), best.getRefreshRate(), now.getRefreshRate()));
+                best.getPhysicalHeight(), best.getRefreshRate(), now.getRefreshRate());
+        android.util.Log.i("SpeedBreakerOne", chosen);
+        DownloadsLog.note(chosen);
         mSurface.getHolder().addCallback(new android.view.SurfaceHolder.Callback() {
             @Override public void surfaceCreated(android.view.SurfaceHolder h) {
                 try { h.getSurface().setFrameRate(60f, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE); }
