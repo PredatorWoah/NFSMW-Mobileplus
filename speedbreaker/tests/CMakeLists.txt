@@ -181,3 +181,6 @@ sb_test(gpu_work_reduction_test)
 
 sb_test(depth_stage_test)
 sb_test(shader_predicate_test SOURCES ${RT}/gpu/shader_translator.cpp ${RT}/gpu/xenos/ucode.cpp)
+
+# USA payout arithmetic: signed conversion, finite inputs and overflow boundaries.
+sb_test(cheat_cash_test)

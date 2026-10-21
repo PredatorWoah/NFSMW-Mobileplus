@@ -8,7 +8,7 @@
         </activity>
         <activity android:name=".ControlsEditorActivity" android:exported="false" android:screenOrientation="sensorLandscape"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation|density" />
-        <activity android:name=".SpeedBreakerActivity" android:process=":game" android:taskAffinity="com.onenonlygit.speedbreakerone.game" android:exported="false" android:screenOrientation="sensorLandscape" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation|density" android:launchMode="singleTask">
+        <activity android:name=".SpeedBreakerActivity" android:process=":game" android:taskAffinity="${applicationId}.game" android:exported="false" android:screenOrientation="sensorLandscape" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation|density" android:launchMode="singleTask">
         </activity>
     </application>
 </manifest>

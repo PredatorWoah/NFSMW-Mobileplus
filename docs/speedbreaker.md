@@ -44,16 +44,14 @@ de flujo de control, los de predicados y los de BC.
 
 ## Lo que se le ha añadido aquí
 
-- **Los arreglos de Mali, por familia y no por una versión del driver.** Solo se activaban con
-  el driver `226496512` exacto: una actualización del sistema los apagaba en silencio, y
-  volvían las rayas y el cuelgue al cargar. Ahora, cualquier Mali-G1 (Ultra, Premium, Pro); con
-  otro driver, una línea en el log lo dice. `NFSMW_FORWARD_CF=0` y
-  `NFSMW_SHARED_MEMORY=import` siguen sirviendo para comparar sin ellos
-  (`runtime/gpu/renderer.cpp`, `ObservedMaliG1Driver`).
+- **Los arreglos de Mali se limitan al equipo medido.** El camino de copia y el flujo
+  de shaders hacia delante se activan automáticamente en Mali-G1-Ultra MC12,
+  driver `226496512`, donde se comprobaron. No se da por probada toda la familia.
+  `NFSMW_FORWARD_CF=0` y `NFSMW_SHARED_MEMORY=import` permiten comparar.
 - **Registro en Descargas** (`DownloadsLog.java`, adaptado de `RegistroDescargas`): cada
   partida o sonda deja en `Download/SpeedBreaker-logs/` el logcat de la app, el registro nativo
   de la sesión (`files/data/speedbreaker/logs/<hora>.log`, que es adonde va su stderr) copiado según crece, y
-  una línea `diag` cada 5 s (estado y margen térmico, batería, RAM libre, RSS, Hz y MHz de cada
+  una línea de diagnóstico cada 10 s (estado y margen térmico, batería, RAM libre, RSS, Hz y MHz de cada
   núcleo). También los informes de cuelgue y de fallo (`logs/hang-*.txt`, `logs/crash-*.txt`) y
   los zip de **Save Bug Report**, enteros y una vez cada uno. Al abrir el lanzador, si la partida anterior acabó mal, el motivo de Android, el
   logcat que quedaba y el tombstone. Puesto por defecto; el botón **Logs to Downloads** del
@@ -70,8 +68,9 @@ de flujo de control, los de predicados y los de BC.
 
 ## Controles táctiles
 
-Dos disposiciones (`TouchGamepadView.java`), cada una con su editor y sus posiciones guardadas
-aparte. La barra de arriba cambia de una a otra en cualquier momento, abre el editor de la que
+Dos disposiciones nuevas, RACING y XBOX, más SAVED para conservar exactamente
+las posiciones antiguas de `touch_layout_v1`. Cada una tiene su editor y sus posiciones
+guardadas aparte (`TouchGamepadView.java`). La barra de arriba cambia de una a otra en cualquier momento, abre el editor de la que
 se ve (arrastrar, SIZE − / +, SAVE, RESET, CANCEL), el menú CHEATS y **SETTINGS**, los ajustes
 del propio SpeedBreaker (su atajo Back + Start): tope de fps (Auto baja a 30 con el móvil
 caliente), resolución interna, posproceso.
@@ -115,13 +114,13 @@ una fuente; nada de interruptores que no hagan nada.
 | Ford GT de Castrol | ← → ← → ↑ ↓ ↑ ↓ | Ídem. Una lista lo intercambia con el de Burger King |
 | Porsche Cayman | L R R R → ← → ↓ | Ídem. «L/R» son gatillos en unas listas y botones superiores en otras: se mandan los dos |
 | Black Edition | Parche de datos `0x82A2CE04 = 0x100` al arrancar (`runtime/game/cheats.cpp`), el de Xenia para el título 454107D9, que lista el XEX USA | **Funciona** en el XEX USA (vivo X300 Pro, 2026-10-21: `[cheats] Black Edition content: on` y coches desbloqueados). Solo escribe si encuentra 0 (o ya 0x100); si no, lo dice en el log |
-| Dinero (y recompensa) | Buscador de números (`runtime/platform/android/cheat_finder.cpp`): buscar lo que muestra el juego, cambiarlo jugando, volver a buscar, fijar | Probado con memoria simulada; sin probar en el móvil |
+| Dinero de carrera (experimental) | Gancho USA de recompensa: rellena hasta 100.000.000 al cobrar una carrera; SHA-256 y diez instrucciones comprobadas | Apagado por defecto; aritmética probada, efecto en partida aún sin verificar. No es gasto infinito |
 
 Los códigos se introducen en la pantalla de título («Press Start»), como en una 360, y quedan en
 el perfil. Los de arranque se guardan en `files/data/speedbreaker/cheats.txt` («id=1» por
 línea) y se aplican con **Save & Restart**, que reinicia el proceso del juego desde el lanzador.
 
-**Por qué solo datos.** El código del juego está recompilado de antemano: escribir instrucciones
+**Datos y ganchos de código.** El código del juego está recompilado de antemano: escribir instrucciones
 PowerPC en la memoria no cambia nada (lo que sí hace un parche de Xenia en el emulador). Un truco
 de código necesita un gancho (`config/nfsmw.toml`); uno de datos, una escritura antes del punto
 de entrada, donde Xenia aplica los suyos.
@@ -131,16 +130,16 @@ de entrada, donde Xenia aplica los suyos.
 **Nitro y SpeedBreaker infinitos.** En PC son interruptores de depuración que quedaron en el
 juego publicado: `Tweak_InfiniteNOS` y `Tweak_InfiniteRaceBreaker`, dos `bool` a 0; ponerlos a 1
 es todo el truco ([s-b-repo/nfsmw-2005-re](https://github.com/s-b-repo/nfsmw-2005-re),
-`docs/MOD_RECIPES.md`). La 360 sale del mismo código, así que los dos existirán en sus datos;
-falta su dirección en el XEX USA, que no lleva nombres. Con tu `default.xex` (en el Mac):
+`docs/MOD_RECIPES.md`). No está demostrado que esos símbolos existan en la 360 ni
+que sus direcciones de PC sirvan. Con tu `default.xex` (en el Mac):
 
 1. En el código generado (`ppc/`), la función que muestrea el medidor de nitro lee un byte
    global (`lbz` de una dirección de `.data`/`.bss`), lo compara con 0 y, si no es 0, se salta
    la resta del depósito. En PC, `Tweak_InfiniteNOS` lo lee solo esa función. Buscar en `ppc/`
    las lecturas de un byte global justo antes de una rama que se salta una resta en coma
    flotante sobre un campo del coche, y quedarse con las candidatas.
-2. Probar cada candidata con una línea en `kCheats` de `runtime/game/cheats.cpp` (dato 0 → 1):
-   el medidor deja de bajar o no.
+2. Trazar la candidata y comprobar instrucciones, propietarios y límites antes de un
+   ensayo aislado con copia de la partida; no escribir bytes por intuición.
 3. Igual con el SpeedBreaker, cuyo medidor se muestrea al lado.
 
 **Todos los coches.** En PC, `AwardBonusCars(fePlayerCarDB)` y `AwardRivalCar(..., clave)` tras
@@ -149,7 +148,7 @@ llame: con el `ppc/` delante, por la cadena de los nombres de coche (`"CORVETTEC
 `StringToKey`).
 
 **Oros en los desafíos.** Están en el perfil guardado; sin estructura conocida del de la 360.
-El buscador no sirve (no hay un número a la vista que buscar).
+No hay estructura del perfil USA validada para modificarlos.
 
 ## Compilar
 
@@ -179,6 +178,28 @@ Para actualizar una instalación sin borrarla hace falta la misma clave de firma
 (`SB_KEYSTORE`, `SB_KEY_ALIAS`, `SB_STORE_PASSWORD`, `SB_KEY_PASSWORD`, de tu entorno, nunca
 en el repositorio).
 
+## Estado de la integración Vivo (2026-10-21)
+
+Se integraron los cambios de la sesión local `speedbreaker-mali` hasta `92300e6`,
+conservando SETTINGS y los informes de fallos/bug reports de este repositorio.
+[Registro técnico y límites](../speedbreaker/docs/ANDROID_REFERENCE_PORT.md):
+partida ERIC y controles antiguos conservados; selección de trucos con escritura
+atómica y reinicio solo tras guardarla; cancelación del mando inyectado al pausar;
+Black Edition confirmado al arrancar; gancho de dinero experimental y apagado.
+La selección de códigos del título se guarda aparte en `title-code-selection.txt`;
+se introducen manualmente en Press Start. Desmarcar un truco no deshace cambios
+que el propio juego ya haya guardado.
+
+Se retiró el buscador/escritor genérico de memoria: que ocho direcciones coincidan
+con una cantidad no demuestra que sean el dinero. Los registros capturados de
+reflejos usan signo sin sesgo y exponente cero; todavía no hay una corrección visual
+verificada. No se oscurecieron reflejos a ojo ni se recortó calidad.
+
+El APK completo probado sigue siendo una compilación privada con el XEX del usuario.
+Los cambios adicionales de integración con SETTINGS/informes requieren una nueva
+prueba de dispositivo; compilar la sonda no valida el juego completo. Nunca se suben
+partidas, datos/código generado del juego, registros privados ni claves de firma.
+
 ## Lo que queda
 
 - **Coches demasiado brillantes.** Su muestreo de texturas no usa los campos de signo, gamma y
@@ -187,4 +208,5 @@ en el repositorio).
 - Sin comprobar todavía: una carrera completa y otra seguida, el modo carrera, volver de
   segundo plano, los dos lados en apaisado, y temperatura y memoria a lo largo de varias
   carreras.
-- El ajuste a 60 Hz y el registro en Descargas de aquí no se han probado aún en el móvil.
+- El registro térmico directo en Descargas está comprobado. La petición de 60 Hz sigue
+  mostrando 90 Hz en el Vivo: no se afirma una mejora de cadencia.

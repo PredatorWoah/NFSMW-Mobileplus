@@ -1,99 +1,66 @@
-// SpeedBreaker runtime. GPL-3.0-or-later (see COPYING). See cheats.h.
+// SpeedBreaker One. GPL-3.0-or-later.
+// Optional USA-specific career payout adjustment. No raw instruction patch,
+// external trainer execution, save editing or arbitrary memory search.
 #include <stdafx.h>
 #include "cheats.h"
-
-#include <kernel/memory.h>
+#include <kernel/function.h>
+#include <kernel/vmem.h>
 #include <user/paths.h>
-
-#include <cstdio>
 #include <fstream>
-#include <set>
-#include <string>
 
-namespace
-{
-    struct DataPatch
-    {
-        uint32_t address;  // guest, big-endian 32-bit word
-        uint32_t value;
-        // The values found there that are safe to replace: the original
-        // and the patched one (already applied, e.g. a second start).
-        uint32_t expected[2];
-    };
-
-    struct Cheat
-    {
-        const char* id;    // the key in cheats.txt
-        const char* name;  // for the log
-        DataPatch patches[4];
-        int count;
-    };
-
-    // Black Edition content: the bonus cars and races of the Collector's
-    // Edition. From Xenia's game patches for title 454107D9
-    // (xenia-canary/game-patches, "Black Edition content", by tuhana), which
-    // lists the NTSC-U default.xex (FB9D1825EAC7AA75) among its modules. The
-    // word is in the image's data, so it is a plain data write here too.
-    // The original value is assumed 0 (the edition off); anything else is
-    // left alone and logged.
-    constexpr Cheat kCheats[] = {
-        { "black_edition", "Black Edition content", { { 0x82A2CE04, 0x00000100, { 0x00000000, 0x00000100 } } }, 1 },
-    };
-
-    std::set<std::string> ReadEnabled(const std::filesystem::path& path)
-    {
-        std::set<std::string> on;
-        std::ifstream in(path);
-        for (std::string line; std::getline(in, line);)
-        {
-            while (!line.empty() && (line.back() == '\r' || line.back() == ' '))
-                line.pop_back();
-            size_t eq = line.find('=');
-            if (line.empty() || line[0] == '#' || eq == std::string::npos)
-                continue;
-            if (line.substr(eq + 1) == "1")
-                on.insert(line.substr(0, eq));
-        }
-        return on;
-    }
+extern "C" PPC_FUNC(__imp__sub_82337760);
+namespace {
+bool s_cash=false;
+constexpr uint32_t kPayoutReturn=0x82364890;
+bool ExpectedPayoutCode() {
+    // Check the owning USA call and complete conversion/add/store sequence.
+    constexpr uint32_t words[]={0x4BFD2ED5,0x38810050,0xFC00081E,0x815F000C,
+        0x5783063E,0x2B030000,0x7C0027AE,0x81610050,0x7D6B5214,0x917F000C};
+    auto* p=static_cast<const uint32_t*>(g_memory.Translate(kPayoutReturn-4));
+    for(size_t i=0;i<std::size(words);i++)if(ByteSwap(p[i])!=words[i])return false;
+    return true;
 }
-
-namespace cheats
-{
-    void ApplyStartup()
-    {
-        const std::filesystem::path path = GetUserPath() / "cheats.txt";
-        const std::set<std::string> on = ReadEnabled(path);
-        if (on.empty())
-            return;
-        std::set<std::string> known;
-        for (const Cheat& cheat : kCheats)
-        {
-            known.insert(cheat.id);
-            if (!on.count(cheat.id))
-                continue;
-            bool applied = true;
-            for (int i = 0; i < cheat.count; i++)
-            {
-                const DataPatch& p = cheat.patches[i];
-                auto* word = static_cast<uint32_t*>(g_memory.Translate(p.address));
-                const uint32_t now = ByteSwap(*word);
-                bool safe = false;
-                for (uint32_t v : p.expected)
-                    safe |= now == v;
-                if (!safe)
-                {
-                    fprintf(stderr, "[cheats] %s: %08X holds %08X, not an expected value; NOT patched "
-                        "(another executable?)\n", cheat.name, p.address, now);
-                    applied = false;
-                    continue;
-                }
-                *word = ByteSwap(p.value);
-            }
-            fprintf(stderr, "[cheats] %s: %s\n", cheat.name, applied ? "on" : "skipped");
-        }
-        for (const std::string& id : on)
-            if (!known.count(id))
-                fprintf(stderr, "[cheats] unknown cheat '%s' in %s, ignored\n", id.c_str(), path.string().c_str());
+}
+namespace game::cheats {
+void Initialize(bool supportedUsa) {
+    bool selected=false,blackEdition=false;
+    std::ifstream in(GetUserPath()/"cheats.txt");
+    for(std::string line;std::getline(in,line);) {
+        if(!line.empty() && line.back()=='\r')line.pop_back();
+        if(line=="career_cash_payout=1")selected=true;
+        if(line=="black_edition=1")blackEdition=true;
     }
+    s_cash=selected && supportedUsa && ExpectedPayoutCode();
+    // Xenia Canary game-patches, title 454107D9, "Black Edition content"
+    // (tuhana). USA flag independently checked as zero in the original image.
+    // Only data is written; the executable itself and disk dump stay untouched.
+    if(blackEdition && supportedUsa) {
+        auto* flag=static_cast<uint32_t*>(g_memory.Translate(0x82A2CE04));
+        const uint32_t original=ByteSwap(*flag);
+        uint32_t replacement;
+        if(BlackEditionFlag(supportedUsa,original,replacement)) {
+            *flag=ByteSwap(replacement);
+            fprintf(stderr,"[cheats] Black Edition bonus content enabled; USA data flag 82A2CE04=00000100\n");
+        } else fprintf(stderr,"[cheats] Black Edition NOT applied: unexpected original flag %08X\n",original);
+    } else fprintf(stderr,"[cheats] Black Edition selected=%d eligible=%d active=0\n",blackEdition,supportedUsa);
+    fprintf(stderr,"[cheats] career cash payout top-up selected=%d eligible=%d active=%d\n",
+        selected,supportedUsa,s_cash);
+}
+}
+PPC_FUNC(sub_82337760) {
+    const uint32_t caller=uint32_t(ctx.lr), profile=ctx.r31.u32;
+    __imp__sub_82337760(ctx,base);
+    if(!s_cash || caller!=kPayoutReturn || (profile&3) || profile>UINT32_MAX-16)return;
+    // r31 is the caller's live profile record (callee preserves it). Confirm
+    // the allocator still owns this readable/writable word. No broad scan.
+    const uint32_t address=profile+12;
+    vmem::PageHeap* heap=vmem::HeapFor(address);
+    vmem::RegionInfo info{};
+    if(!heap || !heap->Query(address,&info) || info.state!=vmem::X_MEM_COMMIT ||
+       !(info.protect&(0x04|0x40)) || uint64_t(address)+4>uint64_t(info.baseAddress)+info.regionSize)return;
+    const uint32_t cash=PPC_LOAD_U32(address);
+    const double old=ctx.f1.f64;
+    ctx.f1.f64=game::cheats::CareerCashReward(cash,old);
+    if(ctx.f1.f64!=old)fprintf(stderr,"[cheats] USA career payout: cash=%u reward=%.3f -> %.3f, target=%u; guest performs store\n",
+        cash,old,ctx.f1.f64,game::cheats::kCareerCashTarget);
 }

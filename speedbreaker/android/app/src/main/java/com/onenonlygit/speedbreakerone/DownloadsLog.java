@@ -30,7 +30,7 @@ import java.util.*;
  *
  *   sb_<time>_<kind>.txt         device/SoC/cores/display header, this app's
  *                                logcat while it runs (SDL, Java, the Vulkan
- *                                driver) and a "diag" line every 5 s: thermal
+ *                                driver) and a "diag" line every 10 s: thermal
  *                                status and headroom, battery temperature, free
  *                                RAM, RSS, display Hz and each core's MHz
  *   sb_<time>_<kind>_<log>       the native session log (files/data/speedbreaker/logs, where
@@ -65,6 +65,9 @@ final class DownloadsLog {
     private Process logcat;
     private Thread logcatThread, copyThread;
     private volatile boolean stopping;
+    private PowerManager.OnThermalStatusChangedListener thermalListener;
+    private long bytesWritten, logTextBytes;
+    private static final long SESSION_LIMIT=64L<<20, FILE_LIMIT=16L<<20;
 
     private DownloadsLog(Context ctx, OutputStream out, String base) { this.ctx = ctx; this.out = out; this.base = base; }
 
@@ -89,10 +92,16 @@ final class DownloadsLog {
     }
 
     /** From onDestroy, before the process is killed. */
-    static synchronized void stop() {
+    static synchronized void stop(Runnable complete) {
         DownloadsLog d = current;
         current = null;
-        if (d != null) d.finish();
+        java.util.concurrent.atomic.AtomicBoolean done=new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable once=() -> {if(done.compareAndSet(false,true))complete.run();};
+        Thread cleanup=new Thread(() -> {try {if(d!=null)d.finish();}finally {once.run();}},"SB log shutdown");
+        cleanup.start();
+        // Process teardown must not depend on a logcat pipe or slow storage.
+        Thread deadline=new Thread(() -> {try {Thread.sleep(1500);}catch(InterruptedException ignored){}once.run();},"SB log shutdown deadline");
+        deadline.setDaemon(true);deadline.start();
     }
 
     private void run() {
@@ -104,7 +113,10 @@ final class DownloadsLog {
             if (previous != null) previous.uncaughtException(t, e);
         });
         PowerManager pm = ctx.getSystemService(PowerManager.class);
-        if (pm != null) pm.addThermalStatusListener(ctx.getMainExecutor(), s -> Log.w(TAG, "thermal status -> " + thermal(s)));
+        if (pm != null) {
+            thermalListener=s -> write("[device] thermal status -> "+thermal(s)+"\n");
+            pm.addThermalStatusListener(ctx.getMainExecutor(),thermalListener);
+        }
 
         // Only this app's lines (Android allows no others), from now on.
         since = String.format(Locale.ROOT, "%d.%03d", started / 1000, started % 1000);
@@ -133,40 +145,28 @@ final class DownloadsLog {
             int tick = 0;
             while (!stopping) {
                 copyNativeLogs();
-                if (++tick % 5 == 0) diag(sample());
+                if (++tick % 10 == 0) write("[device] "+stamp(new Date())+" "+sample()+"\n");
                 try { Thread.sleep(1000); } catch (InterruptedException e) { break; }
             }
             copyNativeLogs();
+            for(OutputStream o:copies.values())close(o);
         }, "SB downloads copy");
         copyThread.setDaemon(true);
         copyThread.start();
     }
 
     private void finish() {
-        diag("session end: " + sample());
+        write("[device] session end: "+sample()+"\n");
         stopping = true;
-        if (copyThread != null) { copyThread.interrupt(); join(copyThread, 2000); }
+        if (copyThread != null) { copyThread.interrupt(); join(copyThread, 400); }
         if (logcat != null) logcat.destroy();
-        if (logcatThread != null) join(logcatThread, 1000);
-        // logcat delivers late: a short session (the probe) used to end before
-        // most of its lines arrived. Take the rest from its buffer, skipping the
-        // lines already written (same lines, same order).
-        try {
-            Process lc = new ProcessBuilder("logcat", "-d", "-v", "threadtime", "-T", since).redirectErrorStream(true).start();
-            StringBuilder rest = new StringBuilder();
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(lc.getInputStream(), StandardCharsets.UTF_8), 1 << 16)) {
-                long skip = logcatLines;
-                for (String line; (line = in.readLine()) != null; )
-                    if (skip > 0) skip--; else rest.append(line).append('\n');
-            }
-            lc.waitFor();
-            if (rest.length() > 0) write(rest.toString());
-        } catch (IOException | InterruptedException e) {
-            write("\n[log] could not read the end of logcat: " + e + "\n");
-        }
+        if (logcatThread != null) join(logcatThread, 200);
         write("\n=== end " + stamp(new Date()) + " ===\n");
+        PowerManager pm=ctx.getSystemService(PowerManager.class);
+        if(pm!=null && thermalListener!=null)pm.removeThermalStatusListener(thermalListener);
         close(out);
-        for (OutputStream o : copies.values()) close(o);
+        // The copier owns its streams. Do not race a still-running final copy.
+        if(copyThread==null || !copyThread.isAlive())for(OutputStream o:copies.values())close(o);
     }
 
     /**
@@ -212,7 +212,7 @@ final class DownloadsLog {
             if (length == from) continue;
             OutputStream o = copies.get(f);
             if (o == null) {
-                o = create(ctx, base + "_" + f.getName());
+                o = bounded(create(ctx, base + "_" + f.getName()));
                 if (o == null) continue;
                 copies.put(f, o);
             }
@@ -240,14 +240,23 @@ final class DownloadsLog {
         SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         Set<String> done = new HashSet<>(p.getStringSet("reports", Collections.emptySet()));
         if (done.contains(f.getName())) return;
-        OutputStream o = create(ctx, f.getName());
-        if (o == null) return;
-        try {
-            Files.copy(f.toPath(), o);
-        } catch (IOException e) {
-            Log.w(TAG, "could not copy " + f + ": " + e);
+        // Preserve complete report files. Do not truncate a ZIP at the stream
+        // quota, and do not mark a failed copy as delivered.
+        long size=f.length();
+        if(size>FILE_LIMIT)return;
+        synchronized(this) {
+            if(size>SESSION_LIMIT-bytesWritten)return;
+            OutputStream o=create(ctx,f.getName());
+            if(o==null)return;
+            try {
+                long written=Files.copy(f.toPath(),o);
+                bytesWritten+=written;
+                o.flush();
+                if(written!=size || f.length()!=size)return;
+            }catch(IOException e) {
+                Log.w(TAG,"could not copy "+f+": "+e);return;
+            }finally {close(o);}
         }
-        close(o);
         done.add(f.getName());
         p.edit().putStringSet("reports", done).apply();
         diag("copied " + f.getName() + " to Download/SpeedBreaker-logs");
@@ -372,7 +381,7 @@ final class DownloadsLog {
                 .append("pss=").append(e.getPss() >> 10).append("MB rss=").append(e.getRss() >> 10).append("MB\n");
         try (InputStream trace = e.getTraceInputStream()) {
             if (trace != null) {
-                byte[] data = trace.readAllBytes();
+                byte[] data = trace.readNBytes(4<<20);
                 if (e.getReason() == ApplicationExitInfo.REASON_CRASH_NATIVE) {
                     OutputStream t = create(ctx, base + "_tombstone.pb");
                     if (t != null) { t.write(data); close(t); s.append("tombstone: ").append(base).append("_tombstone.pb\n"); }
@@ -386,7 +395,7 @@ final class DownloadsLog {
         s.append("=== logcat left in the buffer ===\n");
         try {
             Process lc = new ProcessBuilder("logcat", "-d", "-v", "threadtime", "-t", "5000").redirectErrorStream(true).start();
-            s.append(new String(lc.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+            s.append(new String(lc.getInputStream().readNBytes(2<<20), StandardCharsets.UTF_8));
             lc.waitFor();
         } catch (IOException | InterruptedException ex) {
             s.append("logcat unavailable: ").append(ex).append('\n');
@@ -422,9 +431,29 @@ final class DownloadsLog {
         }
     }
 
+    private OutputStream bounded(OutputStream target) {
+        if(target==null)return null;
+        return new FilterOutputStream(target) {
+            long written;
+            @Override public void write(byte[] b,int off,int len)throws IOException {
+                synchronized(DownloadsLog.this) {
+                    int n=(int)Math.max(0,Math.min(len,Math.min(FILE_LIMIT-written,SESSION_LIMIT-bytesWritten)));
+                    if(n>0){out.write(b,off,n);written+=n;bytesWritten+=n;}
+                }
+            }
+            @Override public void write(int b)throws IOException {byte[] one={(byte)b};write(one,0,1);}
+        };
+    }
+
     private void write(String text) {
         synchronized (out) {
-            try { out.write(text.getBytes(StandardCharsets.UTF_8)); out.flush(); } catch (IOException ignored) { }
+            try {
+                byte[] bytes=text.getBytes(StandardCharsets.UTF_8);
+                synchronized(this) {
+                    int n=(int)Math.max(0,Math.min(bytes.length,Math.min(FILE_LIMIT-logTextBytes,SESSION_LIMIT-bytesWritten)));
+                    if(n>0){out.write(bytes,0,n);logTextBytes+=n;bytesWritten+=n;out.flush();}
+                }
+            } catch(IOException ignored){}
         }
     }
 

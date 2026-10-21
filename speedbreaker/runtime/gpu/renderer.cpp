@@ -5553,6 +5553,13 @@ void main()
         void Resolve()
         {
             s_stats.resolves++;
+            static const bool logReflectionResolves=[] {const char* v=std::getenv("NFSMW_REFLECTION_LOG");return v && v[0]=='1';}();
+            static std::set<std::array<uint32_t,3>> reflectionResolves;
+            const std::array<uint32_t,3> reflectionResolve={s_regs[XE_GPU_REG_RB_COLOR_INFO],
+                s_regs[XE_GPU_REG_RB_COPY_DEST_INFO],s_regs[XE_GPU_REG_RB_SURFACE_INFO]};
+            if(logReflectionResolves && reflectionResolves.size()<96 && reflectionResolves.insert(reflectionResolve).second)
+                fprintf(stderr,"[reflection-resolve] color=%08x copy_dest=%08x surface=%08x control=%08x\n",
+                    reflectionResolve[0],reflectionResolve[1],reflectionResolve[2],s_regs[XE_GPU_REG_RB_COPY_CONTROL]);
             auto copyControl = Reg<reg::RB_COPY_CONTROL>();
             auto surfaceInfo = Reg<reg::RB_SURFACE_INFO>();
             uint32_t pitch = surfaceInfo.surface_pitch;
@@ -6776,30 +6783,11 @@ void main()
             return m;
         }
 
-        // Arm's Mali-G1 family (Mali-G1-Ultra/-Premium/-Pro, any core count),
-        // where both workarounds keyed on this were measured: the Vivo X300 Pro's
-        // Mali-G1-Ultra MC12, driver r54p1 (226496512). Matched by family, not by
-        // that exact driver build: a system update ships a new driver, and
-        // silently dropping both workarounds would bring back the video stripes
-        // and the minutes-long shader compile on loading a save. A driver other
-        // than the measured one is logged so a regression can be traced to it.
         bool ObservedMaliG1Driver(const VkPhysicalDeviceProperties& props)
         {
 #ifdef __ANDROID__
-            const std::string_view name(props.deviceName);
-            const bool g1 = props.vendorID == 0x13b5 && name.starts_with("Mali-G1") &&
-                (name.size() == 7 || name[7] < '0' || name[7] > '9');
-            if (g1 && props.driverVersion != 226496512)
-            {
-                static const bool once = [&] {
-                    fprintf(stderr, "[renderer] Mali-G1 driver %u differs from the measured r54p1 (226496512): "
-                        "workarounds kept on; NFSMW_FORWARD_CF=0 / NFSMW_SHARED_MEMORY=import compare without them\n",
-                        props.driverVersion);
-                    return true;
-                }();
-                (void)once;
-            }
-            return g1;
+            return props.vendorID == 0x13b5 && std::string_view(props.deviceName) == "Mali-G1-Ultra MC12" &&
+                props.driverVersion == 226496512;
 #else
             return false;
 #endif
@@ -8123,6 +8111,35 @@ void main()
         }
         VkDescriptorImageInfo textureInfos[96];
         float textureReciprocal[32][4] = {};
+        // Temporary bring-up probe: metadata only, no image readbacks or
+        // shading changes. Run on the CP thread before cached texture lookup.
+        // Deduplicate material state rather than changing guest base addresses,
+        // so rotating cube targets cannot exhaust the quota in one frame.
+        static const bool logReflectionFetch = [] {
+            const char* v = std::getenv("NFSMW_REFLECTION_LOG");
+            return v && v[0] == '1';
+        }();
+        static std::set<std::array<uint64_t, 6>> reflectionFetches;
+        if (logReflectionFetch && s_ps->info.textureCubeMask && reflectionFetches.size() < 192)
+            for (uint32_t d = 0; d < 3; ++d)
+                for (uint32_t n = 0; n < 32; ++n)
+                {
+                    if (!((layout.psMasks[d] >> n) & 1)) continue;
+                    const uint32_t* words = &s_regs[XE_GPU_REG_SHADER_CONSTANT_FETCH_00_0 + n * 6];
+                    const std::array<uint64_t, 6> key = { s_ps->hash, n | (d << 8) | ((words[1] & 0xFFu) << 16),
+                        (words[0] & 0x3FFu) | (uint64_t(words[3]) << 32), words[2],
+                        s_regs[XE_GPU_REG_RB_COLOR_INFO] | (uint64_t(s_regs[XE_GPU_REG_RB_COLOR1_INFO]) << 32),
+                        s_regs[XE_GPU_REG_RB_COLOR2_INFO] | (uint64_t(s_regs[XE_GPU_REG_RB_COLOR3_INFO]) << 32) };
+                    if (reflectionFetches.size() >= 192 || !reflectionFetches.insert(key).second) continue;
+                    xenos::xe_gpu_texture_fetch_t f;
+                    memcpy(&f, words, sizeof(f));
+                    fprintf(stderr, "[reflection-fetch] vs=%016llx ps=%016llx slot=%u dim=%u format=%u signs=%u,%u,%u,%u exp=%d swizzle=%03x raw=%08x,%08x,%08x,%08x,%08x,%08x color=%08x,%08x,%08x,%08x\n",
+                        (unsigned long long)s_vs->hash, (unsigned long long)s_ps->hash, n, d, uint32_t(f.format),
+                        uint32_t(f.sign_x), uint32_t(f.sign_y), uint32_t(f.sign_z), uint32_t(f.sign_w), int(f.exp_adjust),
+                        uint32_t(f.swizzle), words[0], words[1], words[2], words[3], words[4], words[5],
+                        s_regs[XE_GPU_REG_RB_COLOR_INFO], s_regs[XE_GPU_REG_RB_COLOR1_INFO],
+                        s_regs[XE_GPU_REG_RB_COLOR2_INFO], s_regs[XE_GPU_REG_RB_COLOR3_INFO]);
+                }
         for (uint32_t d = 0; d < 3; d++)
             for (uint32_t n = 0; n < 32; n++)
             {

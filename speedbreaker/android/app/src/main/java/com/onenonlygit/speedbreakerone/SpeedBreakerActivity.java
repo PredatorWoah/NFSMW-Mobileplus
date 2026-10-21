@@ -15,6 +15,8 @@ public final class SpeedBreakerActivity extends SDLActivity {
     private android.window.OnBackInvokedCallback probeBack;
     private TouchGamepadView touchControls;
     private boolean resumed;
+    private boolean displayCallbackRegistered;
+    private CheatsMenu cheatsMenu;
     private static native void nativeDiscResult(int fd, String name, String error);
 
     @Override protected void onCreate(Bundle state) {
@@ -22,7 +24,7 @@ public final class SpeedBreakerActivity extends SDLActivity {
         DownloadsLog.start(this, BuildConfig.PLATFORM_PROBE ? "probe" : "game");
         super.onCreate(state);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        if (!BuildConfig.PLATFORM_PROBE) preferSixtyHertz();
+        if (!BuildConfig.PLATFORM_PROBE && getSharedPreferences("display_policy",MODE_PRIVATE).getBoolean("prefer60",true)) preferSixtyHertz();
         WindowManager.LayoutParams windowParams = getWindow().getAttributes();
         windowParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         getWindow().setAttributes(windowParams);
@@ -49,20 +51,21 @@ public final class SpeedBreakerActivity extends SDLActivity {
             mLayout.addView(touchControls, new android.widget.RelativeLayout.LayoutParams(
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT));
             // CHEATS, top right in the touch controls' bar (CheatsMenu).
-            CheatsMenu menu = new CheatsMenu(this, touchControls);
-            touchControls.setOnCheats(menu::show);
+            cheatsMenu = new CheatsMenu(this, touchControls);
+            touchControls.setOnCheats(cheatsMenu::show);
         }
     }
 
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
-        applySixtyHertz();
+        if (!BuildConfig.PLATFORM_PROBE && getSharedPreferences("display_policy",MODE_PRIVATE).getBoolean("prefer60",true)) preferSixtyHertz();
         if (touchControls != null) touchControls.resume();
     }
 
     @Override protected void onPause() {
         resumed = false;
+        if (cheatsMenu != null) cheatsMenu.cancel();
         if (touchControls != null) touchControls.pause();
         super.onPause();
     }
@@ -163,11 +166,11 @@ public final class SpeedBreakerActivity extends SDLActivity {
     // A new launch must start with fresh native globals and one Vulkan loader.
     // Home/background only pauses/stops the Activity and does not call this.
     @Override protected void onDestroy() {
+        if (cheatsMenu != null) cheatsMenu.cancel();
         if (touchControls != null) touchControls.pause();
         if (probeBack != null) getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(probeBack);
         super.onDestroy();
-        DownloadsLog.stop();
-        android.os.Process.killProcess(android.os.Process.myPid());
+        DownloadsLog.stop(() -> android.os.Process.killProcess(android.os.Process.myPid()));
     }
 
     // The game runs at 60 or 30 fps (Frame Rate: 60, 30, or Auto, which drops
@@ -187,18 +190,27 @@ public final class SpeedBreakerActivity extends SDLActivity {
             if (multiple && (best == null || m.getRefreshRate() < best.getRefreshRate())) best = m;
         }
         if (best == null) return;
-        sixtyHertz = best;
+        sixtyHertz=best;
         applySixtyHertz();
-        String chosen = String.format(java.util.Locale.ROOT,
-                "[display] %dx%d@%.0f Hz for 60/30 fps (was %.0f Hz)", best.getPhysicalWidth(),
-                best.getPhysicalHeight(), best.getRefreshRate(), now.getRefreshRate());
-        android.util.Log.i("SpeedBreakerOne", chosen);
+        String chosen=String.format(java.util.Locale.ROOT,
+                "[display] requested mode=%d %.1f Hz; current=%.1f Hz",best.getModeId(),best.getRefreshRate(),now.getRefreshRate());
+        android.util.Log.i("SpeedBreakerOne",chosen);
         DownloadsLog.note(chosen);
-        mSurface.getHolder().addCallback(new android.view.SurfaceHolder.Callback() {
-            @Override public void surfaceCreated(android.view.SurfaceHolder h) { surfaceFrameRate(h); }
-            @Override public void surfaceChanged(android.view.SurfaceHolder h, int format, int w, int hgt) { surfaceFrameRate(h); }
-            @Override public void surfaceDestroyed(android.view.SurfaceHolder h) { }
-        });
+        if(!displayCallbackRegistered) {
+            displayCallbackRegistered=true;
+            mSurface.getHolder().addCallback(new android.view.SurfaceHolder.Callback() {
+                @Override public void surfaceCreated(android.view.SurfaceHolder h) { requestSurfaceRate(h); }
+                @Override public void surfaceChanged(android.view.SurfaceHolder h,int format,int w,int height) { requestSurfaceRate(h); }
+                @Override public void surfaceDestroyed(android.view.SurfaceHolder h) { }
+            });
+        }
+        // SDL may already have created its surface before this callback was added.
+        requestSurfaceRate(mSurface.getHolder());
+    }
+    private void requestSurfaceRate(android.view.SurfaceHolder holder) {
+        if(!holder.getSurface().isValid())return;
+        try {holder.getSurface().setFrameRate(60f,android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);}
+        catch(IllegalArgumentException|IllegalStateException e) {android.util.Log.w("SpeedBreakerOne","[display] setFrameRate: "+e);}
     }
 
     // The 60 Hz mode (preferSixtyHertz), asked again whenever the window comes
@@ -214,15 +226,6 @@ public final class SpeedBreakerActivity extends SDLActivity {
         params.preferredDisplayModeId = sixtyHertz.getModeId();
         params.preferredRefreshRate = sixtyHertz.getRefreshRate();
         getWindow().setAttributes(params);
-    }
-
-    private void surfaceFrameRate(android.view.SurfaceHolder h) {
-        try {
-            h.getSurface().setFrameRate(60f, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
-                    android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            android.util.Log.w("SpeedBreakerOne", "[display] setFrameRate: " + e);
-        }
     }
 
     public String gpuDriverDirectory() { String s=getIntent().getStringExtra("driver_dir"); return s==null?"":s; }
@@ -264,7 +267,8 @@ public final class SpeedBreakerActivity extends SDLActivity {
     }
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) { hideSystemBars(); applySixtyHertz(); }
+        if (hasFocus) {hideSystemBars();applySixtyHertz();}
+        else if (cheatsMenu != null) cheatsMenu.focusLost();
         if (touchControls != null) {
             if (hasFocus && resumed) touchControls.resume();
             else touchControls.pause();

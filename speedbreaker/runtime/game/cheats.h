@@ -1,22 +1,20 @@
-// SpeedBreaker runtime. GPL-3.0-or-later (see COPYING).
-//
-// Cheats chosen in the Android CHEATS menu (or by hand), applied as guest
-// data writes right after the XEX image is copied into guest memory and
-// before its entry point runs: where Xenia applies its game patches.
-//
-// Only data can be patched this way. The game's code was recompiled ahead of
-// time, so writing PowerPC instructions into guest memory changes nothing;
-// a cheat that needs different behaviour needs a hook (config/nfsmw.toml).
-//
-// The choices are read from <user folder>/cheats.txt, one "id=1" per line
-// (the launcher writes it). Every patch checks the value it replaces first
-// and is skipped, with a log line, when that value is not one it expects:
-// on another executable, a wrong address must not become a corrupted game.
+// SpeedBreaker One. GPL-3.0-or-later.
 #pragma once
-
-namespace cheats
-{
-    // Reads cheats.txt and applies the enabled data patches. Call once, after
-    // the image is in guest memory and before the guest's entry point.
-    void ApplyStartup();
+#include <cmath>
+#include <cstdint>
+#include <limits>
+namespace game::cheats {
+constexpr uint32_t kCareerCashTarget=100000000;
+// The USA caller truncates reward to int32 then adds it to current cash.
+// Alter only ordinary positive payouts below the target; preserve other cases.
+inline double CareerCashReward(uint32_t current,double reward) {
+    if(current>kCareerCashTarget || !std::isfinite(reward) || reward<0 ||
+       reward>double(std::numeric_limits<int32_t>::max())-current)return reward;
+    return double(current)+std::trunc(reward)<kCareerCashTarget ? double(kCareerCashTarget-current) : reward;
+}
+inline bool BlackEditionFlag(bool supportedUsa,uint32_t original,uint32_t& replacement) {
+    if(!supportedUsa || (original!=0 && original!=0x100))return false;
+    replacement=0x100;return true;
+}
+void Initialize(bool supportedUsa);
 }

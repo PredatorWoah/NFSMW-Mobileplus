@@ -27,9 +27,9 @@
 #include <install/sha256.h>
 #include <install/disc_mount.h>
 #include <report/report.h>
+#include <game/cheats.h>
 #include <ui/installer_screen.h>
 #include <ui/ui.h>
-#include <game/cheats.h>
 #include <user/paths.h>
 #include <user/settings.h>
 #include <user/version_check.h>
@@ -287,6 +287,7 @@ int main(int argc, char** argv)
     setenv("NFSMW_XMA_STATS", "1", 0);
     setenv("NFSMW_GPU_TIMING", "1", 0);
     setenv("NFSMW_VISUAL_CAPTURE", "0", 0);  // Performance build: no image readback stalls.
+    setenv("NFSMW_REFLECTION_LOG", "1", 0);  // Bounded metadata-only material probe.
     const auto files = platform::android::Files();
     std::filesystem::create_directories(files / "imports");
     chdir(files.c_str());
@@ -554,14 +555,12 @@ int main(int argc, char** argv)
     }
     memcpy(g_memory.Translate(image.base), image.data.get(), image.size);
     fprintf(stderr, "[loader] image %08zX-%08zX, entry %08zX\n", image.base, image.base + image.size, image.entry_point);
-    // The CHEATS menu's data patches, onto the image before any guest code
-    // runs (game/cheats.h).
-    cheats::ApplyStartup();
 
     // Which game files this is, then the whole system summary for the log.
     {
         std::string sha = install::ToHex(install::Sha256Of(file.data(), file.size()));
         const install::Manifest& manifest = install::GameManifest();
+        game::cheats::Initialize(sha == "aebdf3c14d1e4e4ed2c130d94bc1a0e97bd6d5bf39bdfdef33c3909c9cc4ba4c");
         report::SetSystemItem("Game", std::format("{} ({}); default.xex {} bytes, SHA-256 {} ({}); manifest {}",
             GetGamePath().string(), gameOrigin, file.size(), sha, sha == manifest.Xex().sha256 ? "the supported version" : "NOT the supported version",
             manifest.version));

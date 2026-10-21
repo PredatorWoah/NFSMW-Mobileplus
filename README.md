@@ -17,6 +17,13 @@ calls, the filesystem, audio, input, and a translation of the Xenos GPU to Direc
 
 ## This fork
 
+The USA-only SpeedBreaker Android work for Vivo X300 Pro is in
+[`speedbreaker/`](speedbreaker/). See the [current device progress and validation limits](speedbreaker/docs/ANDROID_REFERENCE_PORT.md)
+for preserved saves/custom touch layouts, optional Black Edition content, diagnostics,
+and the experimental payout hook. Car reflections and the remaining requested cheats
+are still under investigation. Full game APKs and signing keys are not published here.
+
+
 This is a fork of [madelrandel-blip/NFSMW-Recompiled](https://github.com/madelrandel-blip/NFSMW-Recompiled)
 that adds an **Android port** (arm64, Snapdragon, Vulkan) and performance work on the Xenos
 GPU path. See [docs/android.md](docs/android.md), [docs/pipeline-nativo.md](docs/pipeline-nativo.md)

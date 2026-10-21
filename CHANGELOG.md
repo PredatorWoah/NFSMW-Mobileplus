@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-21 — SpeedBreaker: integración del trabajo Vivo
+
+- Se conserva el diseño antiguo del mando como SAVED; RACING/XBOX y SETTINGS siguen disponibles.
+- Opciones de trucos guardadas de forma atómica; el reinicio depende de guardado correcto y la entrada se cancela al perder foco.
+- Black Edition restringido al SHA-256 USA y al valor esperado; gancho experimental de dinero por recompensa, apagado por defecto.
+- Registro térmico directo, límites de tamaño y cierre acotado; se conservan informes de cuelgue/fallo y bug report de Descargas.
+- Metadatos de reflejos acotados y resultados reales, sin afirmar una corrección visual ni 60 Hz efectivos.
+- Se retira el escritor genérico de memoria. Partidas, logs privados, XEX/código generado, APK completo y clave de firma quedan fuera de Git.
+- Detalles de pruebas y trabajo pendiente: [checkpoint Vivo](speedbreaker/docs/ANDROID_REFERENCE_PORT.md).
+
+
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]

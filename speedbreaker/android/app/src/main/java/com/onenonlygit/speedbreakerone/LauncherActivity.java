@@ -57,13 +57,19 @@ public final class LauncherActivity extends Activity {
             actions.addView(action, size);
         }
         Button controls = new Button(this);
-        controls.setText("Edit touch controls (racing and Xbox layouts)");
+        controls.setText("Edit touch controls (saved, racing and Xbox layouts)");
         controls.setOnClickListener(v -> startActivity(new Intent(this, ControlsEditorActivity.class)));
         panel.addView(controls);
         Button logs = new Button(this);
         logs.setOnClickListener(v -> { DownloadsLog.setEnabled(this, !DownloadsLog.enabled(this)); logsLabel(logs); });
         logsLabel(logs);
         panel.addView(logs);
+        Button display = new Button(this);
+        SharedPreferences displayPrefs=getSharedPreferences("display_policy",MODE_PRIVATE);
+        Runnable displayLabel=() -> display.setText(displayPrefs.getBoolean("prefer60",true)?"60 Hz display request: ON (restart applies)":"60 Hz display request: OFF (restart applies)");
+        displayLabel.run();
+        display.setOnClickListener(v -> {displayPrefs.edit().putBoolean("prefer60",!displayPrefs.getBoolean("prefer60",true)).commit();displayLabel.run();});
+        panel.addView(display);
         TextView help = new TextView(this);
         help.setText("Import an ARM64 Turnip driver ZIP with meta.json. System driver is always available. Driver changes apply to a new game process; Resume keeps its current driver.");
         panel.addView(help);

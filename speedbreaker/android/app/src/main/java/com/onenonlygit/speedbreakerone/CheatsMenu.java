@@ -8,9 +8,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Button;
-import android.text.InputType;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -19,29 +17,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The CHEATS menu (top right in the game). Two kinds:
- *
- *   Bonus codes   the game's own title-screen button codes, typed through the
- *                 virtual gamepad. Enter them on the title screen ("Press
- *                 Start"); they unlock for the profile, as on a 360.
- *   Start-up      data patches the runtime applies when the game starts
- *                 (runtime/game/cheats.cpp), chosen here, saved to
- *                 <user folder>/cheats.txt; Save & Restart starts the game
- *                 again with them.
- *
- *   Money         a number finder (runtime/platform/android/cheat_finder.cpp):
- *                 search the game's memory for the money shown, change it in
- *                 the game, search again, then set the address that is left.
- *
- * Only what has a source is offered. Unlimited nitro and SpeedBreaker, all
- * cars and gold medals need their Xbox 360 addresses found first
- * (docs/speedbreaker.md).
- */
+/** Title-screen codes with durable saved selections. Guarded optional USA hooks; no arbitrary-memory writes. */
 final class CheatsMenu {
     private static final String TAG = "SpeedBreakerOne";
     private static final int LB = 1 << 9, RB = 1 << 10, UP = 1 << 11, DOWN = 1 << 12, LEFT = 1 << 13, RIGHT = 1 << 14;
@@ -70,23 +49,11 @@ final class CheatsMenu {
                 new int[] {LT, RT, RT, RT, RIGHT, LEFT, RIGHT, DOWN}),
     };
 
-    // Start-up cheats: id (runtime/game/cheats.cpp), label, what it does.
-    private static final String[][] STARTUP = {
-        {"black_edition", "Black Edition content", "The Collector's Edition bonus cars and races (Xenia's patch for this disc)."},
-    };
-
-    // The number finder, in libmain (cheat_finder.cpp): match count, or the
-    // number of addresses written.
-    private static native int nativeFindFirst(int value);
-    private static native int nativeFindNext(int value);
-    private static native int nativeSetMatches(int value, int limit);
-    private static final int SET_LIMIT = 8;
-    private static volatile int finderMatches = -1;  // -1: no search yet (kept while the process lives)
-
     private final Activity activity;
     private final TouchGamepadView pad;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean typing;
+    private AlertDialog shown;
 
     CheatsMenu(Activity activity, TouchGamepadView pad) { this.activity = activity; this.pad = pad; }
 
@@ -112,41 +79,62 @@ final class CheatsMenu {
         all.setOnClickListener(v -> { dialog[0].dismiss(); type(CODES); });
         list.addView(all);
 
-        list.addView(heading("At game start"));
+        list.addView(heading("Saved code selection"));
+        list.addView(note("Save which title-screen codes you want. After restarting, go to Press Start and use Enter selected. Codes are not automatically sent into menus or a loaded save."));
         List<String> enabled = readEnabled();
         List<CheckBox> boxes = new ArrayList<>();
-        for (String[] c : STARTUP) {
+        for (int i=0;i<CODES.length;i++) {
             CheckBox box = new CheckBox(activity);
-            box.setText(c[1] + "\n" + c[2]);
-            box.setChecked(enabled.contains(c[0]));
-            box.setTag(c[0]);
-            boxes.add(box);
-            list.addView(box);
+            box.setText(CODES[i].name);
+            box.setTag("code_"+i);
+            box.setChecked(enabled.contains("code_"+i));
+            boxes.add(box);list.addView(box);
         }
+        list.addView(note("Published bonus codes are not yet verified on this USA build. Turning a saved code off stops future entry; it does not reverse unlocks already saved by the game."));
+        list.addView(heading("Experimental USA startup hook"));
+        CheckBox cash=new CheckBox(activity);
+        cash.setText("Career payout cash top-up to 100,000,000 (experimental, OFF by default)");
+        cash.setTag("career_cash_payout");
+        cash.setChecked(read(new File(cheatsFile().getParentFile(),"cheats.txt")).contains("career_cash_payout"));
+        boxes.add(cash);list.addView(cash);
+        list.addView(note("Applies after Save & Restart, on the next career race payout. This is not unlimited spending. The USA instruction sequence is checked, but device behavior is unverified. The game may save the resulting balance; disabling this stops future top-ups, without restoring an earlier balance."));
+        CheckBox edition=new CheckBox(activity);
+        edition.setText("Black Edition bonus cars and events");
+        edition.setTag("black_edition");
+        edition.setChecked(read(new File(cheatsFile().getParentFile(),"cheats.txt")).contains("black_edition"));
+        boxes.add(edition);list.addView(edition);
+        list.addView(note("Uses the USA game's bonus-content flag, not a different executable. You reported this working. Apply with Save & Restart; disable and restart to stop applying the flag. Unlocks already saved by the game may remain."));
+        Button selected = new Button(activity);
+        selected.setText("Enter selected at title screen");
+        selected.setOnClickListener(v -> {
+            if(!save(boxes))return;
+            List<Code> codes=new ArrayList<>();
+            for(int i=0;i<CODES.length;i++)if(boxes.get(i).isChecked())codes.add(CODES[i]);
+            if(codes.isEmpty())return;
+            dialog[0].dismiss();type(codes.toArray(new Code[0]));
+        });
+        list.addView(selected);
+        Button save = new Button(activity);
+        save.setText("Save choices");
+        save.setOnClickListener(v -> {if(save(boxes))Toast.makeText(activity,"Choices saved",Toast.LENGTH_SHORT).show();});
+        list.addView(save);
         Button restart = new Button(activity);
         restart.setText("Save & Restart");
         restart.setOnClickListener(v -> new AlertDialog.Builder(activity)
-                .setMessage("Save these choices and restart the game? Unsaved race progress will be lost.")
+                .setMessage("Save this code selection and restart? Unsaved race progress will be lost. No save file is deleted. Enabled USA hooks apply at startup. Enter bonus codes at Press Start after restarting.")
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Restart", (d, w) -> { save(boxes); restartGame(); })
-                .show());
+                .setPositiveButton("Restart", (d,w) -> {if(save(boxes))restartGame();}).show());
         list.addView(restart);
 
-        list.addView(heading("Money"));
-        list.addView(note("Finds where the game keeps your money, then sets it. Bounty works the same way."));
-        Button money = new Button(activity);
-        money.setText("Money finder");
-        money.setOnClickListener(v -> { dialog[0].dismiss(); moneyFinder(); });
-        list.addView(money);
-
         list.addView(heading("Not available yet"));
-        list.addView(note("Unlimited nitro, unlimited SpeedBreaker, all cars and gold medals: their places in the Xbox 360 game still have to be found. They will appear here when they work."));
+        list.addView(note("Unlimited nitro, unlimited SpeedBreaker, unlimited spending, all cars and gold medals still need verified USA game hooks. The reference money scanner is withheld until it can identify the money field safely; matching a number alone is insufficient."));
 
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(list);
         dialog[0] = new AlertDialog.Builder(activity).setTitle("Cheats").setView(scroll)
                 .setNegativeButton("Close", null).create();
-        dialog[0].setOnDismissListener(d -> { });
+        shown=dialog[0];
+        dialog[0].setOnDismissListener(d -> {if(shown==dialog[0])shown=null;});
         dialog[0].show();
     }
 
@@ -165,84 +153,10 @@ final class CheatsMenu {
         return t;
     }
 
-    // --- The money finder: search, change the money in the game, search again.
-
-    private void moneyFinder() {
-        float dp = activity.getResources().getDisplayMetrics().density;
-        LinearLayout box = new LinearLayout(activity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad16 = (int) (16 * dp);
-        box.setPadding(pad16, pad16 / 2, pad16, 0);
-        TextView status = note(finderStatus());
-        EditText number = new EditText(activity);
-        number.setInputType(InputType.TYPE_CLASS_NUMBER);
-        number.setHint("Money shown in the game, e.g. 12500");
-        box.addView(status);
-        box.addView(number);
-        AlertDialog d = new AlertDialog.Builder(activity).setTitle("Money finder").setView(box)
-                .setPositiveButton(finderMatches < 0 ? "Search" : "Search again", null)
-                .setNeutralButton("Start over", null)
-                .setNegativeButton("Close", null).create();
-        d.setOnShowListener(x -> {
-            Button search = d.getButton(AlertDialog.BUTTON_POSITIVE), over = d.getButton(AlertDialog.BUTTON_NEUTRAL);
-            Runnable refresh = () -> {
-                status.setText(finderStatus());
-                search.setText(finderMatches < 0 ? "Search" : finderMatches <= SET_LIMIT && finderMatches > 0 ? "Set money" : "Search again");
-                number.setHint(finderMatches > 0 && finderMatches <= SET_LIMIT ? "Money you want, e.g. 9999999" : "Money shown in the game, e.g. 12500");
-                number.setText("");
-            };
-            refresh.run();
-            over.setOnClickListener(v -> { finderMatches = -1; refresh.run(); });
-            search.setOnClickListener(v -> {
-                Integer value = parse(number.getText().toString());
-                if (value == null) { Toast.makeText(activity, "Type a whole number", Toast.LENGTH_SHORT).show(); return; }
-                boolean setting = finderMatches > 0 && finderMatches <= SET_LIMIT;
-                boolean first = finderMatches < 0;
-                search.setEnabled(false);
-                status.setText(setting ? "Setting…" : "Searching the game's memory…");
-                new Thread(() -> {
-                    String done;
-                    try {
-                        if (setting) {
-                            int n = nativeSetMatches(value, SET_LIMIT);
-                            done = n > 0 ? "Money set at " + n + " place" + (n > 1 ? "s" : "") + ". It shows the next time the game redraws it (open a menu); it is kept when the game saves." : "Nothing set.";
-                        } else {
-                            finderMatches = first ? nativeFindFirst(value) : nativeFindNext(value);
-                            done = null;
-                        }
-                    } catch (UnsatisfiedLinkError e) {
-                        done = "The finder is not in this build.";
-                    }
-                    final String message = done;
-                    activity.runOnUiThread(() -> {
-                        search.setEnabled(true);
-                        refresh.run();
-                        if (message != null) Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
-                    });
-                }, "money-finder").start();
-            });
-        });
-        d.show();
-    }
-
-    private static String finderStatus() {
-        if (finderMatches < 0) return "1. Type the money the game shows now and tap Search.";
-        if (finderMatches == 0) return "No match. The number must be exactly what the game shows now. Tap Start over.";
-        if (finderMatches <= SET_LIMIT) return "Found (" + finderMatches + " place" + (finderMatches > 1 ? "s" : "") + "). Type the money you want and tap Set money.";
-        return finderMatches + " places still match. 2. Change your money in the game (buy a part, win a race), come back, type the new amount and tap Search again.";
-    }
-
-    private static Integer parse(String text) {
-        String digits = text.replaceAll("[^0-9]", "");
-        if (digits.isEmpty() || digits.length() > 10) return null;
-        long v = Long.parseLong(digits);
-        return v > Integer.MAX_VALUE ? null : (int) v;
-    }
-
     // --- Typing the codes: one press and release per step, on the UI thread.
 
     private void type(Code[] codes) {
-        if (typing) return;
+        if (typing || pad==null || activity.isFinishing()) return;
         typing = true;
         if (pad != null) pad.reset();
         List<int[]> steps = new ArrayList<>();
@@ -254,8 +168,8 @@ final class CheatsMenu {
             if (seq == null) { t += 600; continue; }
             for (int button : seq) {
                 final int b = button;
-                handler.postDelayed(() -> press(b), t);
-                handler.postDelayed(() -> TouchGamepadView.inject(0, 0, 0), t + PRESS_MS);
+                handler.postDelayed(() -> {if(typing && pad.canInject())press(b);}, t);
+                handler.postDelayed(() -> {if(typing)TouchGamepadView.inject(0, 0, 0);}, t + PRESS_MS);
                 t += PRESS_MS + GAP_MS;
             }
         }
@@ -266,42 +180,71 @@ final class CheatsMenu {
         }, t);
     }
 
+    void focusLost() {
+        handler.removeCallbacksAndMessages(null);typing=false;
+        if(pad!=null)pad.reset();
+    }
+
+    void cancel() {
+        handler.removeCallbacksAndMessages(null);
+        typing=false;
+        if(shown!=null){shown.dismiss();shown=null;}
+        if(pad!=null)pad.reset();
+    }
+
     private static void press(int button) {
         if (button == LT) TouchGamepadView.inject(0, 1, 0);
         else if (button == RT) TouchGamepadView.inject(0, 0, 1);
         else TouchGamepadView.inject(button, 0, 0);
     }
 
-    // --- Start-up cheats: <files>/data/speedbreaker/cheats.txt (user/paths.h).
+    // Saved code selection is separate from game saves and native startup patches.
 
     private File cheatsFile() {
         File data = new File(activity.getFilesDir(), "data");
         File old = new File(data, "nfsmw-recomp"), current = new File(data, "speedbreaker");
         File user = !current.isDirectory() && old.isDirectory() ? old : current;
-        return new File(user, "cheats.txt");
+        return new File(user, "title-code-selection.txt");
     }
 
-    private List<String> readEnabled() {
+    private List<String> readEnabled() {return read(cheatsFile());}
+    private List<String> read(File file) {
         List<String> on = new ArrayList<>();
         try {
-            for (String line : Files.readAllLines(cheatsFile().toPath(), StandardCharsets.UTF_8))
+            for (String line : java.util.Arrays.asList(new String(new android.util.AtomicFile(file).readFully(),StandardCharsets.UTF_8).split("\\n")))
                 if (line.trim().endsWith("=1")) on.add(line.trim().substring(0, line.trim().length() - 2));
         } catch (IOException ignored) { }
         return on;
     }
 
-    private void save(List<CheckBox> boxes) {
-        StringBuilder s = new StringBuilder("# Written by the CHEATS menu; read at game start (runtime/game/cheats.cpp).\n");
-        for (CheckBox b : boxes) s.append(b.getTag()).append('=').append(b.isChecked() ? 1 : 0).append('\n');
-        File f = cheatsFile();
-        f.getParentFile().mkdirs();
-        try (FileOutputStream out = new FileOutputStream(f)) {
-            out.write(s.toString().getBytes(StandardCharsets.UTF_8));
-            out.getFD().sync();
-        } catch (IOException e) {
-            Toast.makeText(activity, "Could not save: " + e.getMessage(), Toast.LENGTH_LONG).show();
+    private boolean save(List<CheckBox> boxes) {
+        StringBuilder codes=new StringBuilder("# Saved title-screen code selection; entered manually.\n");
+        StringBuilder startup=new StringBuilder("# USA-only optional startup hooks. Optional bonus content.\n");
+        for(CheckBox b:boxes) {
+            StringBuilder dest=b.getTag().toString().startsWith("code_")?codes:startup;
+            dest.append(b.getTag()).append('=').append(b.isChecked()?1:0).append('\n');
         }
-        Log.i(TAG, "[cheats] saved: " + s.toString().replace('\n', ' '));
+        return write(cheatsFile(),codes.toString()) && write(new File(cheatsFile().getParentFile(),"cheats.txt"),startup.toString());
+    }
+    private boolean write(File f,String text) {
+        android.util.AtomicFile atomic=new android.util.AtomicFile(f);
+        FileOutputStream out=null;
+        try {
+            File dir=f.getParentFile();
+            if(!dir.isDirectory() && !dir.mkdirs())throw new IOException("Could not create settings folder");
+            out=atomic.startWrite();
+            out.write(text.getBytes(StandardCharsets.UTF_8));
+            out.getFD().sync();
+            atomic.finishWrite(out);out=null;
+            // Verify the durable contents before allowing a process restart.
+            if(!new String(atomic.readFully(),StandardCharsets.UTF_8).equals(text))throw new IOException("Settings verification failed");
+            Log.i(TAG,"[cheats] title-code selection saved");
+            return true;
+        } catch(IOException e) {
+            if(out!=null)atomic.failWrite(out);
+            Toast.makeText(activity,"Could not save: "+e.getMessage(),Toast.LENGTH_LONG).show();
+            return false;
+        }
     }
 
     // The launcher restarts the game process (its "Restart game" path), from

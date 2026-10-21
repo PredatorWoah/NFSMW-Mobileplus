@@ -355,3 +355,14 @@ use by the car draws is not yet established. NFSMW-Mobileplus handles these in a
 different shader/resource architecture, so its code is a reference rather than a
 drop-in fix. No arbitrary reflection multiplier or global brightness reduction
 was applied. Obtain actual affected draw fetch/constants before a graphics trial.
+
+## NFSMW-Mobileplus reference port and cheat investigation
+
+See ANDROID_REFERENCE_PORT.md for the reviewed reference identity, saved-layout
+preservation, Downloads/thermal logging, optional USA cheat hooks, build/device
+checks and remaining tests. Original control geometry remains untouched; fresh
+save backups preserve subsequent gameplay rather than restoring older ERIC data.
+Reflection-fetch states captured so far use unsigned channels and zero exponent;
+render-target metadata also reports zero exponent. No reflection attenuation was
+introduced. Black Edition is now explicitly requested after the user's successful
+reference test, and is offered as a guarded optional USA bonus-content flag.
