@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 19,
-  "versionName": "0.1.18",
-  "notes": "The app icon is now Need for Speed: Most Wanted's own dashboard icon, taken from your disc. Plus everything from 0.1.17: the black and gold launcher, Garage and home-screen shortcut.",
+  "versionCode": 20,
+  "versionName": "0.1.19",
+  "notes": "The Most Wanted cover art in HD: a sharp app icon with the full logo and the M3 GTR, the same art in the launcher, and the whole cover faded behind it.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
