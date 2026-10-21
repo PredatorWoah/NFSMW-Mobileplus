@@ -32,7 +32,8 @@ public final class LauncherActivity extends Activity {
         super.onCreate(state);
         prefs = getSharedPreferences("gpu_driver", MODE_PRIVATE);
         root = new android.widget.FrameLayout(this);
-        root.addView(new MwTheme.Backdrop(this), new android.widget.FrameLayout.LayoutParams(-1, -1));
+        backdrop = new MwTheme.Backdrop(this);
+        root.addView(backdrop, new android.widget.FrameLayout.LayoutParams(-1, -1));
         home = buildHome();
         garage = buildGarage();
         root.addView(home, new android.widget.FrameLayout.LayoutParams(-1, -1));
@@ -40,6 +41,7 @@ public final class LauncherActivity extends Activity {
         garage.setVisibility(android.view.View.GONE);
         setContentView(root);
         refresh();
+        updatePinnedShortcut();  // a shortcut pinned by an older build takes the current icon
         // Why the last game process ended, if it ended badly (DownloadsLog). Reads logcat: off the UI thread.
         android.content.Context app = getApplicationContext();
         new Thread(() -> DownloadsLog.reportExits(app), "exit-report").start();
@@ -58,6 +60,8 @@ public final class LauncherActivity extends Activity {
     private android.widget.ImageView art;
     private TextView title, running, badge;
     private Button driverRow, logsRow, displayRow, updatesRow, shortcutRow;
+    private MwTheme.Backdrop backdrop;
+    private boolean backdropSet;
     private android.window.OnBackInvokedCallback garageBack;
 
     private android.view.View buildHome() {
@@ -158,7 +162,7 @@ public final class LauncherActivity extends Activity {
         shortcutRow.setOnClickListener(v -> pinShortcut());
         Button back = MwTheme.secondary(this, "Back");
         back.setOnClickListener(v -> showGarage(false));
-        for (Button b : new Button[] {driverRow, logsRow, displayRow, updatesRow, shortcutRow}) {
+        for (Button b : new Button[] {shortcutRow, driverRow, logsRow, displayRow, updatesRow}) {
             LinearLayout.LayoutParams each = new LinearLayout.LayoutParams(-1, -2);
             each.topMargin = MwTheme.dp(this, 10);
             list.addView(b, each);
@@ -180,7 +184,7 @@ public final class LauncherActivity extends Activity {
         garage.setVisibility(show ? android.view.View.VISIBLE : android.view.View.GONE);
         if (show) {
             refresh();
-            driverRow.requestFocus();
+            shortcutRow.requestFocus();
             if (garageBack == null) {
                 garageBack = () -> showGarage(false);
                 getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, garageBack);
@@ -202,8 +206,15 @@ public final class LauncherActivity extends Activity {
     // The disc's art and name, saved by the game process (runtime/user/title_art.cpp).
     private File userFile(String name) { return new File(new File(new File(getFilesDir(), "data"), "speedbreaker"), name); }
 
+    // The cover art, in the game APK when it was built with private/cover.jpg
+    // (scripts/android/prepare_disc_icon.sh): resources that exist only there,
+    // so looked up by name. 0 when absent.
+    private int coverResource(String name) { return getResources().getIdentifier(name, "drawable", getPackageName()); }
+
     private android.graphics.Bitmap titleIcon(int size) {
-        android.graphics.Bitmap icon = android.graphics.BitmapFactory.decodeFile(userFile("title-icon.png").getPath());
+        int cover = coverResource("launcher_art");
+        android.graphics.Bitmap icon = cover != 0 ? android.graphics.BitmapFactory.decodeResource(getResources(), cover) : null;
+        if (icon == null) icon = android.graphics.BitmapFactory.decodeFile(userFile("title-icon.png").getPath());
         return icon == null ? null : android.graphics.Bitmap.createScaledBitmap(icon, size, size, true);
     }
 
@@ -213,18 +224,41 @@ public final class LauncherActivity extends Activity {
     }
 
     /** A home-screen shortcut with the disc's own icon that goes straight to the race. */
-    private void pinShortcut() {
-        android.graphics.Bitmap icon = titleIcon(192);
-        android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);
-        if (icon == null) { error("Start the game once first: its icon comes from your disc."); return; }
-        if (shortcuts == null || !shortcuts.isRequestPinShortcutSupported()) { error("This home screen doesn't take shortcuts."); return; }
+    private android.content.pm.ShortcutInfo raceShortcut(android.graphics.Bitmap icon) {
         String name = titleName().isEmpty() ? "SpeedBreaker" : titleName().replace("NFS ", "");
         Intent race = new Intent(this, LauncherActivity.class).setAction(Intent.ACTION_MAIN).putExtra(EXTRA_RACE, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        android.content.pm.ShortcutInfo info = new android.content.pm.ShortcutInfo.Builder(this, "race")
+        return new android.content.pm.ShortcutInfo.Builder(this, "race")
                 .setShortLabel(name).setLongLabel(name + ": race")
-                .setIcon(android.graphics.drawable.Icon.createWithBitmap(icon)).setIntent(race).build();
-        shortcuts.requestPinShortcut(info, null);
+                .setIcon(android.graphics.drawable.Icon.createWithAdaptiveBitmap(adaptive(icon))).setIntent(race).build();
+    }
+
+    /** The icon in an adaptive square: the picture fills the visible centre (72 of 108), black around it. */
+    private static android.graphics.Bitmap adaptive(android.graphics.Bitmap icon) {
+        int full = 432, inner = 288;
+        android.graphics.Bitmap out = android.graphics.Bitmap.createBitmap(full, full, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(out);
+        canvas.drawColor(MwTheme.BLACK);
+        int o = (full - inner) / 2;
+        canvas.drawBitmap(icon, null, new android.graphics.Rect(o, o, o + inner, o + inner), new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG));
+        return out;
+    }
+
+    /** The shortcut already on the home screen, if any, with the current icon. */
+    private void updatePinnedShortcut() {
+        android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);
+        android.graphics.Bitmap icon = titleIcon(512);
+        if (shortcuts == null || icon == null) return;
+        for (android.content.pm.ShortcutInfo pinned : shortcuts.getPinnedShortcuts())
+            if (pinned.getId().equals("race")) shortcuts.updateShortcuts(java.util.Collections.singletonList(raceShortcut(icon)));
+    }
+
+    private void pinShortcut() {
+        android.graphics.Bitmap icon = titleIcon(512);
+        android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);
+        if (icon == null) { error("Start the game once first: its icon comes from your disc."); return; }
+        if (shortcuts == null || !shortcuts.isRequestPinShortcutSupported()) { error("This home screen doesn't take shortcuts."); return; }
+        shortcuts.requestPinShortcut(raceShortcut(icon), null);
     }
 
     /** From the home-screen shortcut: straight into the game (or back to it). */
@@ -245,7 +279,7 @@ public final class LauncherActivity extends Activity {
                 return true;
             }
             android.view.View focused = getCurrentFocus();
-            if (focused == null) { (garage.getVisibility() == android.view.View.VISIBLE ? driverRow : play).requestFocus(); return true; }
+            if (focused == null) { (garage.getVisibility() == android.view.View.VISIBLE ? shortcutRow : play).requestFocus(); return true; }
             focused.performClick();
             return true;
         }
@@ -280,6 +314,11 @@ public final class LauncherActivity extends Activity {
         boolean live = gamePid() != 0;
         android.graphics.Bitmap icon = titleIcon(512);
         if (icon != null) art.setImageBitmap(icon); else art.setImageResource(R.mipmap.ic_launcher);
+        if (!backdropSet) {
+            backdropSet = true;
+            int background = coverResource("launcher_background");
+            if (background != 0) backdrop.setPicture(android.graphics.BitmapFactory.decodeResource(getResources(), background));
+        }
         String name = titleName();
         title.setText(name.isEmpty() ? "SpeedBreaker One" : name);
         // A test APK (-PsbDiagnostics=ON) has no game in it: say so, and what its button really does.
@@ -295,7 +334,7 @@ public final class LauncherActivity extends Activity {
         logsRow.setText("Logs to Downloads:  " + (DownloadsLog.enabled(this) ? "on (Download/SpeedBreaker-logs)" : "off"));
         displayRow.setText("60 Hz display request:  " + (displayPrefs.getBoolean("prefer60", true) ? "on" : "off"));
         updatesRow.setText("Check for updates  (" + BuildConfig.VERSION_NAME + ")");
-        shortcutRow.setText("Add to home screen" + (icon == null ? "  (start the game once first)" : "  (with your disc's icon)"));
+        shortcutRow.setText("Add to home screen" + (icon == null ? "  (start the game once first)" : "  (a shortcut straight to the race)"));
     }
     private void play(boolean restart) {
         if (importing) return;
@@ -367,7 +406,8 @@ public final class LauncherActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request,result,data);
-        if (request!=IMPORT || result!=RESULT_OK || data==null || data.getData()==null) return;
+        if (result!=RESULT_OK || data==null || data.getData()==null) return;
+        if (request!=IMPORT) return;
         Uri uri = data.getData(); importing=true; refresh();
         new Thread(() -> {
             File folder = new File(new File(getFilesDir(), "gpu-drivers"), UUID.randomUUID().toString());

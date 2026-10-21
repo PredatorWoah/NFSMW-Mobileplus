@@ -148,13 +148,33 @@ final class MwTheme {
 
     /** The backdrop: black, a warm glow behind the art, faint speed stripes, a gold rule along the bottom. */
     static final class Backdrop extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        private android.graphics.Bitmap picture;
 
         Backdrop(Context c) { super(c); }
+
+        /** The player's own background picture (Garage), or null for plain black. */
+        void setPicture(android.graphics.Bitmap bitmap) { picture = bitmap; invalidate(); }
 
         @Override protected void onDraw(Canvas canvas) {
             int w = getWidth(), h = getHeight();
             canvas.drawColor(BLACK);
+            if (picture != null) {
+                // Centre-cropped and faded, darker toward the buttons on the right so they stay readable.
+                float scale = Math.max(w / (float) picture.getWidth(), h / (float) picture.getHeight());
+                float pw = picture.getWidth() * scale, ph = picture.getHeight() * scale;
+                android.graphics.RectF dst = new android.graphics.RectF((w - pw) / 2, (h - ph) / 2, (w + pw) / 2, (h + ph) / 2);
+                paint.setAlpha(110);
+                canvas.drawBitmap(picture, null, dst, paint);
+                paint.setAlpha(255);
+                paint.setShader(new LinearGradient(0, 0, w, 0, new int[] {Color.argb(60, 8, 8, 10), Color.argb(150, 8, 8, 10), Color.argb(215, 8, 8, 10)},
+                        new float[] {0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
+                canvas.drawRect(0, 0, w, h, paint);
+                paint.setShader(new LinearGradient(0, 0, 0, h, new int[] {Color.argb(120, 8, 8, 10), Color.TRANSPARENT, Color.argb(160, 8, 8, 10)},
+                        new float[] {0f, 0.35f, 1f}, Shader.TileMode.CLAMP));
+                canvas.drawRect(0, 0, w, h, paint);
+                paint.setShader(null);
+            }
             paint.setShader(new RadialGradient(w * 0.24f, h * 0.45f, Math.max(w, h) * 0.55f,
                     Color.argb(120, 120, 86, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP));
             canvas.drawRect(0, 0, w, h, paint);

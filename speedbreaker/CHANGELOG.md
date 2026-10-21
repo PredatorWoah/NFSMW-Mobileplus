@@ -4,6 +4,14 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.19 (2026-10-21)
+
+- The game's cover art in HD, built into the owner's private APK from
+  private/cover.jpg (git-ignored; prepare_disc_icon.sh): the app icon is its top
+  square (the logo and the M3 GTR), the launcher shows that square in the gold
+  frame and the whole cover behind everything, faded and darker toward the
+  buttons. A home-screen shortcut already pinned takes the new icon.
+
 ## v0.1.18 (2026-10-21)
 
 - The game APK's app icon is now the game's own dashboard icon, made from the
