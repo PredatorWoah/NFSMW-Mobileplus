@@ -9,8 +9,8 @@ android {
         applicationId 'com.onenonlygit.speedbreakerone'
         minSdk 33
         targetSdk 35
-        versionCode 27
-        versionName '0.1.26'
+        versionCode 28
+        versionName '0.1.27'
         buildConfigField 'boolean', 'PLATFORM_PROBE', (project.findProperty('sbDiagnostics') == 'ON' ? 'true' : 'false')
         // A test build that installs NEXT TO the game instead of over it (the
         // CI's, signed with another key): -PsbAppIdSuffix=.test -PsbAppName="SpeedBreaker Test"

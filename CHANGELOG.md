@@ -21,6 +21,10 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: fuera el Auto a 30** (0.1.27). Incluso a 120 Hz los 30 fps se notaban a
+  saltos: Frame Rate vuelve a 60 por defecto en Android, un Auto de 0.1.24-0.1.26 pasa a 60 una
+  vez y los presets Cool y Quality ponen 60. Auto sigue en el menú para quien lo quiera.
+
 - **SpeedBreaker: Auto vuelve a 60 y el núcleo principal, de verdad** (0.1.26). La 0.1.25
   reservó cpu 0, 4 y 7 juntas (ARM numera los núcleos dentro de cada clúster: los tres leen
   "core 0"); ahora solo cpu 7. Y Auto, ya a 30, esperaba a que el procesador de comandos

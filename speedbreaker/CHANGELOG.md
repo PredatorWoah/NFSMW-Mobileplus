@@ -4,6 +4,14 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.27 (2026-10-22)
+
+- 60 fps again, always: Frame Rate is 60 by default on Android, a Frame
+  Rate of Auto from 0.1.24-0.1.26 goes back to 60 once, and the Cool and
+  Quality presets set 60. Auto's 30 felt too choppy even at 120 Hz; the work
+  now goes into making frames cheaper so 60 lasts. Auto is still in
+  Settings > Display for anyone who wants it.
+
 ## v0.1.26 (2026-10-22)
 
 - The prime core, really this time: 0.1.25 reserved cpu 0, 4 and 7 together
