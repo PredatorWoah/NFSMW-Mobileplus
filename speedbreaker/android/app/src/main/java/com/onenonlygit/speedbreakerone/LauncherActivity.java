@@ -70,6 +70,10 @@ public final class LauncherActivity extends Activity {
         displayLabel.run();
         display.setOnClickListener(v -> {displayPrefs.edit().putBoolean("prefer60",!displayPrefs.getBoolean("prefer60",true)).commit();displayLabel.run();});
         panel.addView(display);
+        Button updates = new Button(this);
+        updates.setText("Check for updates (" + BuildConfig.VERSION_NAME + ")");
+        updates.setOnClickListener(v -> UpdateCheck.check(this, true));
+        panel.addView(updates);
         TextView help = new TextView(this);
         help.setText("Import an ARM64 Turnip driver ZIP with meta.json. System driver is always available. Driver changes apply to a new game process; Resume keeps its current driver.");
         panel.addView(help);
@@ -80,7 +84,9 @@ public final class LauncherActivity extends Activity {
         // Why the last game process ended, if it ended badly (DownloadsLog). Reads logcat: off the UI thread.
         android.content.Context app = getApplicationContext();
         new Thread(() -> DownloadsLog.reportExits(app), "exit-report").start();
+        boolean restarting = getIntent() != null && getIntent().getBooleanExtra(EXTRA_RESTART, false);
         restartIfAsked(getIntent());
+        if (!restarting && !BuildConfig.PLATFORM_PROBE) UpdateCheck.check(this, false);
     }
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); restartIfAsked(intent); }
     private void restartIfAsked(Intent intent) {
