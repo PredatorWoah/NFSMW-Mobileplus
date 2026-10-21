@@ -127,6 +127,11 @@ namespace report
     //                                 WAIT_REG_MEM for <w> s (0: no watchdog;
     //                                 the test switches stay armed)
     void StartWatchdog();
+    // Every runtime thread's stack now, with the command processor's state and
+    // the log's last lines (a hang report's text, not written anywhere): for a
+    // bug report saved while the game seems stuck but still draws (a loading
+    // screen whose loading stopped).
+    std::string ThreadReport(const std::string& why);
 
     // Fed by hot paths (relaxed; costs nothing that shows).
     inline std::atomic<uint64_t> g_fileBytesRead{ 0 };   // NtReadFile

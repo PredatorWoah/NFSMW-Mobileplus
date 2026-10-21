@@ -219,7 +219,16 @@ namespace report
         // 35 MB in 2 s.
         constexpr uint64_t kLoadingBytes = 4ull << 20;
 
-        void WriteHangReport(const std::string& reason, double sinceFrame, double sinceRead, int episode)
+        // When the watchdog last saw a new frame and a disc read (steady clock,
+        // ns; 0 before it runs), for a report written outside it (ThreadReport).
+        std::atomic<int64_t> s_lastFrameNs{ 0 }, s_lastReadNs{ 0 };
+
+        int64_t SteadyNs()
+        {
+            return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        }
+
+        std::string ReportText(const std::string& reason, double sinceFrame, double sinceRead)
         {
             std::vector<ThreadSample> samples = SampleThreads();
             std::string text;
@@ -246,6 +255,12 @@ namespace report
             }
             text += "\nThe log's last lines:\n" + RecentOutput(400);
             text += "\nSystem:\n" + SystemSummary();
+            return text;
+        }
+
+        void WriteHangReport(const std::string& reason, double sinceFrame, double sinceRead, int episode)
+        {
+            const std::string text = ReportText(reason, sinceFrame, sinceRead);
 
             std::filesystem::path dir = LogDirectory();
             std::error_code ec;
@@ -298,6 +313,7 @@ namespace report
                 window[windowPos++ % 20] = bytes - lastBytes;
                 if (bytes != lastBytes)
                     lastReadAt = now;
+                    s_lastReadNs.store(SteadyNs(), std::memory_order_relaxed);
                 lastBytes = bytes;
                 uint64_t recentBytes = 0;
                 for (uint64_t b : window)
@@ -324,6 +340,7 @@ namespace report
                     pausedInGap = false;
                     lastFrames = frames;
                     lastFrameAt = lastFrameSeen = now;
+                    s_lastFrameNs.store(SteadyNs(), std::memory_order_relaxed);
                     gapBytes = bytes;
                 }
                 if (paused)
@@ -527,6 +544,12 @@ namespace report
             when += std::format("{}{:.0f} s in one command processor wait", when.empty() ? "" : " or ", limits.cpWait);
         fprintf(stderr, "[watchdog] a hang report after %s\n", when.c_str());
         std::thread(Watchdog, limits).detach();
+    }
+
+    std::string ThreadReport(const std::string& why)
+    {
+        const int64_t now = SteadyNs(), frame = s_lastFrameNs.load(), read = s_lastReadNs.load();
+        return ReportText(why, frame ? double(now - frame) / 1e9 : 0.0, read ? double(now - read) / 1e9 : 0.0);
     }
 
     namespace detail

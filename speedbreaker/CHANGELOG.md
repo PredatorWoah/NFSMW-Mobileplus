@@ -4,6 +4,16 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.21 (2026-10-21)
+
+- Challenge Series: all completed now turns on: one of its code guards had a
+  wrong word (the branch at 8256AAF0), which left it off on the USA game.
+- Save Bug Report adds reports/threads-now.txt: every thread's stack when it
+  was saved. A load that stops while its loading screen still animates never
+  trips the hang watchdog, so this is how such a stall can be seen.
+- scripts/android/check_guards.sh checks every code guard in runtime/game
+  against default.xex.
+
 ## v0.1.20 (2026-10-21)
 
 - Haptics: a light tick when a finger lands on a touch button (and when the
