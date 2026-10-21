@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 20,
-  "versionName": "0.1.19",
-  "notes": "The Most Wanted cover art in HD: a sharp app icon with the full logo and the M3 GTR, the same art in the launcher, and the whole cover faded behind it.",
+  "versionCode": 21,
+  "versionName": "0.1.20",
+  "notes": "Haptics: a tick on every touch button press, and the game's own rumble (crashes, nitro, rough roads) on your phone's vibration motor; both switchable in the Garage. The 90 Hz fix: if vivo keeps the screen at 90 Hz, the game switches to 120 Hz for smooth 60 fps.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
