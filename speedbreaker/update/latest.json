@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 16,
-  "versionName": "0.1.15",
-  "notes": "New in CHEATS: Unlimited nitro and Unlimited SpeedBreaker (tick them, then Save & Restart; an active meter keeps its charge). Also includes the fix for the freeze after a race and the Power Hints fix.",
+  "versionCode": 17,
+  "versionName": "0.1.16",
+  "notes": "New in CHEATS > Career: Unlimited money, Unlock all cars, and Challenge Series all completed (tick, then Save & Restart). Also includes the post-race freeze fix, the Power Hints fix and unlimited nitro / SpeedBreaker.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
