@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 26,
-  "versionName": "0.1.25",
-  "notes": "The game's draw thread gets the phone's fastest core to itself (it was left on the slower cores that heat caps first), so 60 fps lasts longer before Auto drops to 30. Tip: Game Assistant's refresh rate \"High\" keeps the screen at 120 Hz, where 60 fps is perfectly smooth.",
+  "versionCode": 27,
+  "versionName": "0.1.26",
+  "notes": "The game's draw thread now runs on the phone's fastest core only (0.1.25 also allowed two slower ones), and Frame Rate Auto comes back to 60: after 3 minutes at 30 with the phone cool it tries 60 again.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
