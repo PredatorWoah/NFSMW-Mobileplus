@@ -35,6 +35,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: fondo e icono a elegir en el Garage** (0.1.19). Cualquier imagen del teléfono:
+  el fondo llena el lanzador, atenuado y oscurecido hacia los botones; el icono (un cuadrado
+  central en HD) sustituye al de 64x64 del disco en el lanzador y en el acceso directo, que se
+  actualiza si ya está anclado. `prepare_disc_icon.sh` usa `private/app-icon.png`/`.jpg`
+  (ignorado por git) como icono HD de la app si existe.
+
 - **SpeedBreaker: el icono de la app es el del juego** (0.1.18), hecho del `default.xex` del
   jugador al compilar (`scripts/android/prepare_disc_icon.sh` → `android/app/src/disc/res`,
   ignorado por git): el icono del panel de la 360 centrado en la zona segura de un icono

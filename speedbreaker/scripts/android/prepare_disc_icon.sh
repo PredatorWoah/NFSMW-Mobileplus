@@ -8,6 +8,10 @@
 # speedometer icon, as the CI test APK always does. Nothing of the game is ever
 # committed: run this where the game APK is built, after prepare_recompiler.sh.
 #
+# An HD picture of the owner's choosing at private/app-icon.png (or .jpg;
+# private/ is git-ignored) is used instead of the disc's 64x64 icon, its
+# centre square.
+#
 #   scripts/android/prepare_disc_icon.sh [path/to/default.xex]
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -20,6 +24,9 @@ LIBS=$(find "$XR/build" -name '*.a' ! -path '*XenonAnalyse*')
 "${CXX:-clang++}" -std=c++20 -O1 -I"$XR/XenonUtils" -I"$XR/thirdparty" -I"$XR/thirdparty/simde" \
     "$ROOT/scripts/android/title_icon.cpp" "$XR/build/XenonUtils/libXenonUtils.a" $LIBS -o "$WORK/title_icon"
 "$WORK/title_icon" "$XEX" "$WORK/icon.png"
+for pic in "$ROOT/private/app-icon.png" "$ROOT/private/app-icon.jpg"; do
+    [ -f "$pic" ] && { cp "$pic" "$WORK/icon.png"; echo "HD icon picture: $pic"; break; }
+done
 python3 -I - "$WORK/icon.png" "$ROOT/android/app/src/disc/res" <<'PY'
 # Adaptive icon: black background; the art centred at 66 of the 108dp
 # foreground (the safe zone: launchers show the centre 72, masks keep 66).
@@ -27,6 +34,8 @@ import os, sys
 from PIL import Image, ImageDraw
 src, res = sys.argv[1], sys.argv[2]
 art = Image.open(src).convert("RGBA")
+side = min(art.size)  # an HD picture: its centre square
+art = art.crop(((art.width - side) // 2, (art.height - side) // 2, (art.width + side) // 2, (art.height + side) // 2))
 for name, scale in (("mdpi", 1), ("hdpi", 1.5), ("xhdpi", 2), ("xxhdpi", 3), ("xxxhdpi", 4)):
     d = os.path.join(res, "mipmap-" + name); os.makedirs(d, exist_ok=True)
     full, inner = round(108 * scale), round(66 * scale)
