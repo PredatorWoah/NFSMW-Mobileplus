@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 15,
-  "versionName": "0.1.14",
-  "notes": "Fix for the freeze after a race (a memory pool lookup could loop forever; now checked and repaired, logged as [pool-guard]). Power Hints now aim for your Frame Rate setting: before, loads and hitches made them aim for 30 fps and Android slowed the CPU while the game ran at 60.",
+  "versionCode": 16,
+  "versionName": "0.1.15",
+  "notes": "New in CHEATS: Unlimited nitro and Unlimited SpeedBreaker (tick them, then Save & Restart; an active meter keeps its charge). Also includes the fix for the freeze after a race and the Power Hints fix.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
