@@ -280,10 +280,45 @@ namespace gpu::renderer
         uint8_t* s_ringHost = nullptr;
         VkDeviceSize s_ringOffset = 0;
 
-        // XenosConstants (shader_translator.cpp): c[512], fetch[48], bools[2],
-        // loops[8], drawInfo[4], each a vec4/uvec4.
-        constexpr uint32_t kTextureReciprocalOffset = (512 + 48 + 2 + 8 + 4) * 16;
-        constexpr uint32_t kConstantsSize = kTextureReciprocalOffset + 32 * 16;
+        // XenosConstants (shader_translator.cpp): fetch[48], bools[2], loops[8],
+        // drawInfo[4], textureReciprocal[32], then c[512], each a vec4/uvec4.
+        // An upload is the fixed part and the float constants the draw's two
+        // shaders read (packed: ~20 each, else 256), not all 512; the
+        // descriptor still spans kConstantsSize, so the ring has that much
+        // after its last upload (CreateRing). The rest is never read.
+        constexpr uint32_t kFetchOffset = 0;
+        constexpr uint32_t kBoolsOffset = 48 * 16;
+        constexpr uint32_t kLoopsOffset = (48 + 2) * 16;
+        constexpr uint32_t kDrawInfoOffset = (48 + 2 + 8) * 16;
+        constexpr uint32_t kTextureReciprocalOffset = (48 + 2 + 8 + 4) * 16;
+        constexpr uint32_t kFloatConstOffset = (48 + 2 + 8 + 4 + 32) * 16;
+        constexpr uint32_t kConstantsSize = kFloatConstOffset + 512 * 16;
+
+        // Vertex snapshot reuse. A draw copies each small vertex range it reads
+        // into the ring (the shader reads the copy); the same meshes come
+        // again in the same submission (each shadow cascade, the mirror, the
+        // main view), ~14 MB of copies a frame in free roam. NFSMW_SNAPSHOT_REUSE:
+        // 0 (default) copies every time; 1 serves a repeat from the earlier copy
+        // in this submission's slot while the guest has not written the range;
+        // 2 only measures (what share of repeats would have been identical),
+        // reading the ring back, so a profiling mode.
+        // A range is watched only from its second copy in a submission (a
+        // watched page's CPU write faults, which the per-frame dynamic buffers
+        // would pay every frame); the third draw on is served from the copy.
+        // Watch first, then Current(), then the copy: a write after Watch
+        // moves the range's sequence past Current(), so it is never missed.
+        const uint32_t s_snapshotMode = [] { const char* v = std::getenv("NFSMW_SNAPSHOT_REUSE"); return v ? uint32_t(std::atoi(v)) : 0u; }();
+        struct SnapshotEntry
+        {
+            uint64_t key = 0;         // base << 32 | size
+            uint64_t submission = 0;  // s_submissionCounter of the copy (its ring slot is only good while that one records)
+            VkDeviceSize offset = 0;  // ring offset of the copy
+            uint64_t sequence = 0;    // writewatch::Current() before the watched copy
+            uint8_t stage = 0;        // 1: copied once, 2: watched
+        };
+        constexpr uint32_t kSnapshotEntries = 2048;
+        SnapshotEntry s_snapshotTable[kSnapshotEntries];
+        inline SnapshotEntry& SnapshotSlot(uint64_t key) { return s_snapshotTable[(key * 0x9E3779B97F4A7C15ull) >> 53]; }
 
         // Image memory. Images are bound at offsets into blocks of device
         // memory (64 MB; gpu/block_ranges.h keeps each block's free ranges),
@@ -7072,7 +7107,7 @@ void main()
         void CreateRing()
         {
             VkBufferCreateInfo bci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-            bci.size = kRingSize;
+            bci.size = kRingSize + kConstantsSize;  // (the constants' descriptor reads past a short last upload)
             bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             Check(vkCreateBuffer(s_dev, &bci, nullptr, &s_ring), "vkCreateBuffer(ring)");
             VkMemoryRequirements req;
@@ -7770,6 +7805,66 @@ void main()
         (type == 0 ? s_vs : s_ps) = slot.get();
     }
 
+    // A snapshot of [base, base + size) already in this submission's ring slot
+    // and unchanged since (NFSMW_SNAPSHOT_REUSE=1): its ring offset.
+    static bool SnapshotReusable(uint32_t base, uint32_t size, VkDeviceSize* offset)
+    {
+        if (s_snapshotMode != 1)
+            return false;
+        uint64_t key = uint64_t(base) << 32 | size;
+        const SnapshotEntry& e = SnapshotSlot(key);
+        if (e.key != key || e.submission != s_submissionCounter || e.stage != 2)
+            return false;
+        if (writewatch::WriteSequence(base, size) > e.sequence)
+            return false;
+        *offset = e.offset;
+        return true;
+    }
+
+    // Copies a vertex range into the ring (`host` is `offset` into it) and
+    // keeps what a later draw in the same submission needs to reuse the copy.
+    static void CopySnapshot(uint32_t base, uint32_t size, uint8_t* host, VkDeviceSize offset)
+    {
+        s_stats.snapRanges++;
+        if (s_snapshotMode == 0)
+        {
+            memcpy(host, s_sharedHost + base, size);
+            return;
+        }
+        const uint64_t key = uint64_t(base) << 32 | size;
+        SnapshotEntry& e = SnapshotSlot(key);
+        const bool repeat = e.key == key && e.submission == s_submissionCounter;
+        if (repeat)
+            s_stats.snapRepeats++;
+        if (s_snapshotMode == 2)
+        {
+            if (repeat)
+            {
+                bool same = memcmp(s_ringHost + e.offset, s_sharedHost + base, size) == 0;
+                (same ? s_stats.snapSame : s_stats.snapDiff)++;
+                (same ? s_stats.snapSameBytes : s_stats.snapDiffBytes) += size;
+            }
+            memcpy(host, s_sharedHost + base, size);
+            e = { key, s_submissionCounter, offset, 0, 1 };
+            return;
+        }
+        if (repeat)
+        {
+            if (e.stage == 2)
+                s_stats.snapChanged++;  // a copy we reused before, written since
+            writewatch::Watch(base, size);
+            uint64_t sequence = writewatch::Current();
+            memcpy(host, s_sharedHost + base, size);
+            e.offset = offset;
+            e.sequence = sequence;
+            e.stage = 2;
+            s_stats.snapWatched++;
+            return;
+        }
+        memcpy(host, s_sharedHost + base, size);
+        e = { key, s_submissionCounter, offset, 0, 1 };
+    }
+
     void Draw(uint32_t initiatorValue, uint32_t dmaBase, uint32_t dmaSizeValue)
     {
         if (!s_vk)
@@ -8329,45 +8424,88 @@ void main()
         // were 9 KB an upload, ~2,500 uploads a frame into the BAR ring.
         const Shader* constLayoutVs = s_vs->info.constPacked ? s_vs : nullptr;
         const Shader* constLayoutPs = s_ps->info.constPacked ? s_ps : nullptr;
+        // The float constants an upload holds: the vertex shader's slots, then
+        // the pixel shader's (pc.psConstBase), after the fixed part.
+        auto stageSlots = [](const Shader* packed) -> uint32_t {
+            if (!packed)
+                return 256;
+            uint32_t n = 0;
+            for (uint32_t q = 0; q < 4; q++)
+                n += uint32_t(__builtin_popcountll(packed->info.constUsed[q]));
+            return n;
+        };
+        const uint32_t vsSlots = stageSlots(constLayoutVs), psSlots = stageSlots(constLayoutPs);
+        const VkDeviceSize constantsBytes = kFloatConstOffset + VkDeviceSize(vsSlots + psSlots) * 16;
+        // Snapshots served from an earlier copy in this submission (decided
+        // again after every submit, which retires them).
+        VkDeviceSize reusedOffset[4] = {};
+        bool reused[4] = {};
+        auto setRedirect = [&](uint32_t i, VkDeviceSize ringOffset) {
+            pc.vfRedirect[i][0] = copies[i].base;
+            pc.vfRedirect[i][1] = copies[i].size;
+            pc.vfRedirect[i][2] = uint32_t(ringOffset);
+        };
         while (true)
         {
             bool uploadConstants = g_constantsDirty.load(std::memory_order_relaxed) ||
                 s_lastConstantsSubmission != s_submissionCounter || !s_recording ||
                 constLayoutVs != s_lastConstLayoutVs || constLayoutPs != s_lastConstLayoutPs;
-            VkDeviceSize need = (uploadConstants ? kConstantsSize : 0) + (useIndices ? 256 + indexBytes : 0) +
-                (copyCount ? 256 + copyBytes : 0);
+            bool anyReused = false;
+            VkDeviceSize snapshotBytes = 0;
+            for (uint32_t i = 0; i < copyCount; i++)
+            {
+                reused[i] = SnapshotReusable(copies[i].base, copies[i].size, &reusedOffset[i]);
+                anyReused |= reused[i];
+                if (!reused[i])
+                    snapshotBytes += (copies[i].size + 255) & ~255u;
+            }
+            copyBytes = snapshotBytes;  // (what goes into the ring: the capture's upload bytes)
+            VkDeviceSize need = (uploadConstants ? constantsBytes : 0) + (useIndices ? 256 + indexBytes : 0) +
+                (snapshotBytes ? 256 + snapshotBytes : 0);
             if (need == 0)
+            {
+                for (uint32_t i = 0; i < copyCount; i++)  // (all reused)
+                {
+                    setRedirect(i, reusedOffset[i]);
+                    s_stats.snapReused++;
+                    s_stats.snapReusedBytes += copies[i].size;
+                }
                 break;
+            }
             uint64_t before = s_submissionCounter;
             VkDeviceSize at = RingAllocate(need);
-            if (!uploadConstants && s_submissionCounter != before)
-                continue;  // submitted meanwhile: the cached constants are gone
+            if ((!uploadConstants || anyReused) && s_submissionCounter != before)
+                continue;  // submitted meanwhile: the cached constants and reused snapshots are gone
             if (uploadConstants)
             {
                 g_constantsDirty.store(false, std::memory_order_relaxed);
                 constantsOffset = at;
                 uint8_t* c = s_ringHost + at;
-                auto copyStage = [&](const Shader* packed, uint32_t base) {
-                    const uint32_t* src = &s_regs[XE_GPU_REG_SHADER_CONSTANT_000_X + base * 4];
+                // `regBase`: the stage's first float constant register (VS 0, PS
+                // 256); `slotBase`: where its constants start among c[].
+                auto copyStage = [&](const Shader* packed, uint32_t regBase, uint32_t slotBase) {
+                    const uint32_t* src = &s_regs[XE_GPU_REG_SHADER_CONSTANT_000_X + regBase * 4];
+                    uint8_t* dst = c + kFloatConstOffset + slotBase * 16;
                     if (!packed)
                     {
-                        memcpy(c + base * 16, src, 256 * 16);
+                        memcpy(dst, src, 256 * 16);
                         return;
                     }
                     uint32_t slot = 0;
                     for (uint32_t q = 0; q < 4; q++)
                         for (uint64_t bits = packed->info.constUsed[q]; bits; bits &= bits - 1, slot++)
-                            memcpy(c + (base + slot) * 16, src + (q * 64 + uint32_t(__builtin_ctzll(bits))) * 4, 16);
+                            memcpy(dst + slot * 16, src + (q * 64 + uint32_t(__builtin_ctzll(bits))) * 4, 16);
                 };
-                copyStage(constLayoutVs, 0);    // pc.vsConstBase
-                copyStage(constLayoutPs, 256);  // pc.psConstBase
+                copyStage(constLayoutVs, 0, 0);          // pc.vsConstBase
+                copyStage(constLayoutPs, 256, vsSlots);  // pc.psConstBase
                 s_lastConstLayoutVs = constLayoutVs;
                 s_lastConstLayoutPs = constLayoutPs;
-                memcpy(c + 512 * 16, &s_regs[XE_GPU_REG_SHADER_CONSTANT_FETCH_00_0], 48 * 16);
-                memcpy(c + 560 * 16, &s_regs[XE_GPU_REG_SHADER_CONSTANT_BOOL_000_031], 2 * 16);
-                memcpy(c + 562 * 16, &s_regs[XE_GPU_REG_SHADER_CONSTANT_LOOP_00], 8 * 16);
-                memset(c + 570 * 16, 0, 4 * 16);
+                memcpy(c + kFetchOffset, &s_regs[XE_GPU_REG_SHADER_CONSTANT_FETCH_00_0], 48 * 16);
+                memcpy(c + kBoolsOffset, &s_regs[XE_GPU_REG_SHADER_CONSTANT_BOOL_000_031], 2 * 16);
+                memcpy(c + kLoopsOffset, &s_regs[XE_GPU_REG_SHADER_CONSTANT_LOOP_00], 8 * 16);
+                memset(c + kDrawInfoOffset, 0, 4 * 16);
                 memcpy(c + kTextureReciprocalOffset, textureReciprocal, sizeof(textureReciprocal));
+                s_stats.constantBytes += constantsBytes;
                 memcpy(lastTextureReciprocal, textureReciprocal, sizeof(textureReciprocal));
                 s_lastConstantsOffset = at;
                 s_lastConstantsSubmission = s_submissionCounter;
@@ -8375,7 +8513,7 @@ void main()
             }
             if (useIndices)
             {
-                indexOffset = (at + (uploadConstants ? kConstantsSize : 0) + 255) & ~VkDeviceSize(255);
+                indexOffset = (at + (uploadConstants ? constantsBytes : 0) + 255) & ~VkDeviceSize(255);
                 if (directIndices)
                 {
                     ConvertIndices(s_ringHost + indexOffset, src, count, indices16, restart, resetIndex);
@@ -8409,14 +8547,19 @@ void main()
             }
             if (copyCount)
             {
-                VkDeviceSize snapshot = (at + (uploadConstants ? kConstantsSize : 0) + (useIndices ? 256 + indexBytes : 0) + 255) & ~VkDeviceSize(255);
-                s_stats.snapshotBytes += copyBytes;
+                VkDeviceSize snapshot = (at + (uploadConstants ? constantsBytes : 0) + (useIndices ? 256 + indexBytes : 0) + 255) & ~VkDeviceSize(255);
+                s_stats.snapshotBytes += snapshotBytes;
                 for (uint32_t i = 0; i < copyCount; i++)
                 {
-                    memcpy(s_ringHost + snapshot, s_sharedHost + copies[i].base, copies[i].size);
-                    pc.vfRedirect[i][0] = copies[i].base;
-                    pc.vfRedirect[i][1] = copies[i].size;
-                    pc.vfRedirect[i][2] = uint32_t(snapshot);
+                    if (reused[i])
+                    {
+                        setRedirect(i, reusedOffset[i]);
+                        s_stats.snapReused++;
+                        s_stats.snapReusedBytes += copies[i].size;
+                        continue;
+                    }
+                    CopySnapshot(copies[i].base, copies[i].size, s_ringHost + snapshot, snapshot);
+                    setRedirect(i, snapshot);
                     snapshot += (copies[i].size + 255) & ~255u;
                 }
             }
@@ -9241,7 +9384,7 @@ void main()
             }
         }
         pc.vsConstBase = 0;
-        pc.psConstBase = 256;
+        pc.psConstBase = vsSlots;  // (the upload's layout: the pixel shader's constants follow the vertex shader's)
         pc.indexOffset = s_regs[XE_GPU_REG_VGT_INDX_OFFSET];
         auto colorControl = Reg<reg::RB_COLORCONTROL>();
         pc.alphaTest = colorControl.alpha_test_enable ? uint32_t(colorControl.alpha_func) : 7u;

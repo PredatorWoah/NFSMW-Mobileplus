@@ -648,6 +648,19 @@ namespace gpu
                     lastGuard = guard;
                     lastScaled = scaled;
                     lastPost = post;
+                    // NFSMW_SNAPSHOT_REUSE: the vertex snapshots' repeats and what reuse saved
+                    // (mode 2: how many repeats were identical to the earlier copy).
+                    fprintf(stderr, "[constants] per frame: %.0f uploads, %.0f KB of ring (%.0f bytes each)\n",
+                        double(st.constantUploads - last.constantUploads) / 120, double(st.constantBytes - last.constantBytes) / 1024 / 120,
+                        st.constantUploads > last.constantUploads ? double(st.constantBytes - last.constantBytes) / double(st.constantUploads - last.constantUploads) : 0.0);
+                    if (st.snapRanges != last.snapRanges)
+                        fprintf(stderr, "[snapshot] per frame: %.0f ranges copied, %.0f repeated in their submission, %.0f reused (%.0f KB), "
+                            "%.0f watched, %.0f lost to a write | measured repeats: %.0f identical (%.0f KB), %.0f different (%.0f KB)\n",
+                            double(st.snapRanges - last.snapRanges) / 120, double(st.snapRepeats - last.snapRepeats) / 120,
+                            double(st.snapReused - last.snapReused) / 120, double(st.snapReusedBytes - last.snapReusedBytes) / 1024 / 120,
+                            double(st.snapWatched - last.snapWatched) / 120, double(st.snapChanged - last.snapChanged) / 120,
+                            double(st.snapSame - last.snapSame) / 120, double(st.snapSameBytes - last.snapSameBytes) / 1024 / 120,
+                            double(st.snapDiff - last.snapDiff) / 120, double(st.snapDiffBytes - last.snapDiffBytes) / 1024 / 120);
                     worstMs = 0;
                     lastTime = now;
                     last = st;

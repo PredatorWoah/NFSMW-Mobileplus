@@ -36,12 +36,14 @@ layout(std430, set = 0, binding = 2) readonly buffer RingMemory { uint g_ring[];
 
 layout(std140, set = 0, binding = 1) uniform XenosConstants
 {
-    vec4 c[512];          // float constants (VS and PS share the file)
+    // The fixed part comes first and the float constants last, so an upload
+    // whose shaders read few of them is only that long (renderer.cpp).
     uvec4 fetch[48];      // 32 fetch constants x 6 dwords
     uvec4 bools[2];       // 256 bool constants
     uvec4 loops[8];       // 32 loop constants
     uvec4 drawInfo[4];    // see gpu/renderer.cpp
     vec4 textureReciprocal[32]; // actual sampled host image size, xy reciprocal
+    vec4 c[512];          // float constants (VS and PS share the file)
 } u;
 
 layout(push_constant) uniform DrawConstants
