@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 28,
-  "versionName": "0.1.27",
-  "notes": "60 fps again, always: no more Auto drop to 30 (it goes back to 60 once with this update, and both presets use 60).",
+  "versionCode": 29,
+  "versionName": "0.1.28",
+  "notes": "Cheaper draws: each draw now uploads only the shader constants it uses (about a fifth of the data), from Codex's profile of the draw thread. Should keep 60 fps going longer before it dips.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
