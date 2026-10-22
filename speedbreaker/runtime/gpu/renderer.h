@@ -83,6 +83,12 @@ namespace gpu::renderer
     struct Stats
     {
         uint64_t draws, skipped, resolves, submits, pipelines, uploads, gpuBusyUs, passes, constantUploads, gpuExecUs, tileSkips, snapshotBytes, shadowWaits, shaderCacheHits, pipelineSkips, lateFrames;
+        // Vertex snapshot reuse (NFSMW_SNAPSHOT_REUSE): ranges copied into the ring; copied again after an
+        // earlier copy in the same submission; served from that copy (and its bytes); copies that started
+        // watching the range; reused copies lost to a guest write; measure mode (2): repeats whose data was
+        // identical to the earlier copy, and different, in draws and bytes.
+        uint64_t snapRanges, snapRepeats, snapReused, snapReusedBytes, snapWatched, snapChanged, snapSame, snapDiff, snapSameBytes, snapDiffBytes;
+        uint64_t constantBytes;  // ring bytes taken by constants uploads (counted with constantUploads)
     };
     Stats GetStats();
     // The scaled data path (internal resolution above 1x), totals so far:

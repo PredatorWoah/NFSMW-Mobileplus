@@ -4,6 +4,17 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.28 (2026-10-23)
+
+- Cheaper draws, from a profile of the command processor on the phone
+  (about a quarter of its time was `memcpy`). Each draw uploaded all 512
+  float shader constants (9.7 KB) though its two shaders read about 20 each;
+  it now uploads only those, about 1.9 KB. Races measured 6.6 MB of ring a
+  frame against about 33, and 2.13 us a draw against 2.39. This should push
+  the first dip below 60 later and make later ones shallower; it is not a
+  cure for heat. (Found and measured by Codex; two races, a long free-roam
+  soak still to do.) New log lines: `[constants]`.
+
 ## v0.1.27 (2026-10-22)
 
 - 60 fps again, always: Frame Rate is 60 by default on Android, a Frame

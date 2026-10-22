@@ -21,6 +21,13 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: dibujos más baratos** (0.1.28). Un perfil del procesador de comandos en el
+  teléfono (simpleperf, de Codex): una cuarta parte de su tiempo era `memcpy`. Cada dibujo subía
+  las 512 constantes de shader (9,7 KB) aunque sus dos shaders leen unas 20 cada uno; ahora sube
+  solo las usadas (unos 1,9 KB): 6,6 MB de anillo por fotograma en carrera frente a unos 33, y
+  2,13 us por dibujo frente a 2,39. Medido en dos carreras; falta una sesión larga de mundo
+  abierto.
+
 - **SpeedBreaker: fuera el Auto a 30** (0.1.27). Incluso a 120 Hz los 30 fps se notaban a
   saltos: Frame Rate vuelve a 60 por defecto en Android, un Auto de 0.1.24-0.1.26 pasa a 60 una
   vez y los presets Cool y Quality ponen 60. Auto sigue en el menú para quien lo quiera.
