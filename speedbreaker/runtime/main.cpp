@@ -411,6 +411,13 @@ int main(int argc, char** argv)
         settings::SetDeviceDefault(settings::Id::FrameRate, older ? 30 : settings::kFrameRateAuto, "an iPhone, " + gpu);
     }
 #endif
+#ifdef __ANDROID__
+    // Anti-aliasing (~0.65 ms of GPU a frame) and bicubic sharpening cost
+    // frame time that a Mali-G1 in a city doesn't have: both off by default
+    // on a phone (Settings > Graphics, the Quality Preset put them back).
+    settings::SetDeviceDefault(settings::Id::AntiAliasing, 0, "Android");
+    settings::SetDeviceDefault(settings::Id::Sharpening, 0, "Android");
+#endif
     bool settingsLoaded = settings::Load();
     // Which version ran last: a line in the log (so a bug report shows when a
     // problem began), the "What's new" note below, and this version recorded
@@ -433,6 +440,17 @@ int main(int argc, char** argv)
         {
             settings::Set(settings::Id::FrameRate, 60);
             fprintf(stderr, "[frame rate] Auto -> 60, once, coming from v%s\n", last.c_str());
+            settings::Save();
+        }
+        // Once, coming from before 0.1.29 (the defaults then were AA on and
+        // sharpening 0.3, and a saved file holds every option): those two
+        // exact values become off. A different value was the player's choice.
+        if (!last.empty() && version::Compare(last, "0.1.29") < 0 &&
+            settings::GetStoredValue(settings::Id::AntiAliasing) == 1 && settings::GetStoredValue(settings::Id::Sharpening) == 0.3)
+        {
+            settings::Set(settings::Id::AntiAliasing, 0);
+            settings::Set(settings::Id::Sharpening, 0);
+            fprintf(stderr, "[settings] anti-aliasing and sharpening off, once, coming from v%s\n", last.c_str());
             settings::Save();
         }
 #endif

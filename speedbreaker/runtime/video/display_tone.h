@@ -55,10 +55,28 @@ namespace video::tone
         return e == 1.0 ? v : std::pow(v, e);
     }
 
-    // Nothing to apply: the presenter keeps its plain pipeline.
-    inline bool Neutral(int32_t brightness, bool useRamp)
+    // Yellow Tint Removal: the game's picture is graded olive-yellow. On a
+    // phone screenshot (a safe house, 2026-10-23) red and green sat 1.4-1.6x
+    // over blue in the shadows (8-bit levels 10-30) and 1.15-1.2x in the lights
+    // (about 50). A power curve on blue, exponent below 1, lifts the shadows
+    // most and leaves white alone: 0.89 takes 12 to 17 and 45 to 55 (ratios
+    // to red about 1.04 and 0.95: neutral either side) at the top step. Each
+    // step has 0.977 times the exponent before it (5 steps: 0.89).
+    constexpr int32_t kTintMin = 0;
+    constexpr int32_t kTintMax = 5;
+    constexpr double kTintRatio = 0.977;
+
+    // The exponent for blue at a Yellow Tint Removal step (clamped): 1 at 0.
+    inline double TintBlueExponent(int32_t step)
     {
-        return std::clamp(brightness, kBrightnessMin, kBrightnessMax) == 0 && !useRamp;
+        step = std::clamp(step, kTintMin, kTintMax);
+        return step == 0 ? 1.0 : std::pow(kTintRatio, double(step));
+    }
+
+    // Nothing to apply: the presenter keeps its plain pipeline.
+    inline bool Neutral(int32_t brightness, bool useRamp, int32_t tint = 0)
+    {
+        return std::clamp(brightness, kBrightnessMin, kBrightnessMax) == 0 && !useRamp && std::clamp(tint, kTintMin, kTintMax) == 0;
     }
 
     // out[k][c]: what framebuffer value k/255 of channel c (red, green, blue)
@@ -70,14 +88,20 @@ namespace video::tone
 
     // The table for a Brightness step and, when `ramp` is given, the 360's
     // display ramp before it.
-    inline Lut BuildLut(int32_t brightness, const display_gamma::Table* ramp)
+    inline Lut BuildLut(int32_t brightness, const display_gamma::Table* ramp, int32_t tint = 0)
     {
         Lut lut;
+        const double blue = TintBlueExponent(tint);
         for (uint32_t k = 0; k < 256; k++)
             for (uint32_t c = 0; c < 3; c++)
             {
                 double v = ramp ? ramp->entry[k][c] / 1023.0 : k / 255.0;
-                lut.entry[k][c] = float(ApplyBrightness(v, brightness));
+                v = ApplyBrightness(v, brightness);
+                // After the console's ramp and Brightness: what is left is the
+                // game's own grade, which this takes the yellow out of.
+                if (c == 2 && blue != 1.0)
+                    v = std::pow(std::clamp(v, 0.0, 1.0), blue);
+                lut.entry[k][c] = float(v);
             }
         return lut;
     }

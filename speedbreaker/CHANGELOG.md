@@ -4,6 +4,19 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.29 (2026-10-31)
+
+- Anti-aliasing and sharpening are off by default on Android (about 1.5 ms of
+  GPU a frame back, on a GPU that sat at 16 ms of 16.7 in the city). Coming
+  from an earlier version with the old defaults (AA on, sharpening 0.3), they
+  go off once; any other value you set is kept. The Quality Preset puts both
+  back.
+- Settings > Display > Yellow Tint Removal (0-5, 0 is the original look):
+  the game's picture is graded olive-yellow, blue 1.4-1.6x under red and
+  green in the shadows. This lifts the blue (a power curve, mostly in the
+  shadows, black and white unchanged) in the same table as Brightness, so it
+  costs nothing and menus and the HUD are not touched.
+
 ## v0.1.28 (2026-10-23)
 
 - Cheaper draws, from a profile of the command processor on the phone

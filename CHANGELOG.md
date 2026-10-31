@@ -21,6 +21,13 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: AA y nitidez apagados por defecto en Android, y Yellow Tint Removal** (0.1.29).
+  Anti-aliasing (~0,65 ms) y nitidez bicúbica quedan apagados (una vez, si venían con los valores
+  antiguos; el Quality Preset los devuelve). Nuevo Settings > Display > **Yellow Tint Removal**
+  (0-5): el juego tiñe la imagen de amarillo oliva (azul 1,4-1,6 veces por debajo del rojo y el
+  verde en las sombras, medido en una captura); sube el azul con una curva de potencia en la
+  tabla de tono de Brightness, sin coste y sin tocar menús ni HUD.
+
 - **SpeedBreaker: dibujos más baratos** (0.1.28). Un perfil del procesador de comandos en el
   teléfono (simpleperf, de Codex): una cuarta parte de su tiempo era `memcpy`. Cada dibujo subía
   las 512 constantes de shader (9,7 KB) aunque sus dos shaders leen unas 20 cada uno; ahora sube

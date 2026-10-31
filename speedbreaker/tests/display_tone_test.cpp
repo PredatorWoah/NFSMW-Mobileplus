@@ -361,8 +361,40 @@ namespace
     }
 }
 
+namespace
+{
+    void YellowTint()
+    {
+        // 0 is the original picture and Neutral() still says so.
+        CHECK(video::tone::Neutral(0, false, 0), "tint 0 is neutral");
+        CHECK(!video::tone::Neutral(0, false, 1), "tint 1 is not");
+        const video::tone::Lut plain = video::tone::BuildLut(0, nullptr, 0);
+        const video::tone::Lut full = video::tone::BuildLut(0, nullptr, 5);
+        bool same = true;
+        for (uint32_t k = 0; k < 256; k++)
+            same = same && plain.entry[k][0] == full.entry[k][0] && plain.entry[k][1] == full.entry[k][1];
+        CHECK(same, "red and green are never touched");
+        CHECK(full.entry[0][2] == 0.0f && full.entry[255][2] == 1.0f, "black and white stay put");
+        // The measured cast (phone screenshot): blue 12.2 under red 17.7 in the
+        // shadows, 45.2 under 52 in the lights. At the top step each ends within
+        // 6% of the red it sat under.
+        double shadow = video::tone::Sample(full, 2, 12.2 / 255.0) * 255.0, light = video::tone::Sample(full, 2, 45.2 / 255.0) * 255.0;
+        CHECK(std::abs(shadow / 17.7 - 1.0) < 0.06, "shadow blue %.1f vs red 17.7", shadow);
+        CHECK(std::abs(light / 52.0 - 1.0) < 0.10, "light blue %.1f vs red 52", light);
+        // Monotonic in the step, and brighter blue never darkens anything.
+        double last = 0;
+        for (int32_t step = 0; step <= 5; step++)
+        {
+            double v = video::tone::Sample(video::tone::BuildLut(0, nullptr, step), 2, 0.1);
+            CHECK(v >= last, "step %d: %.4f after %.4f", step, v, last);
+            last = v;
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
+    YellowTint();
     Neutral();
     BrightnessSteps();
     HalfTexels();
