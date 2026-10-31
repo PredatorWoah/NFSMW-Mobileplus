@@ -748,6 +748,7 @@ namespace gpu::renderer
         uint64_t s_lastConstantsSubmission = 0; // submission holding s_lastConstantsOffset
         const void* s_lastConstLayoutVs = nullptr;  // the layout of that upload (see Draw)
         const void* s_lastConstLayoutPs = nullptr;
+        bool s_lastNeutralCurve = false;  // the last upload had the yellow filter's blue raised (Remove Game Yellow Filter)
         VkCommandBuffer s_cmd = VK_NULL_HANDLE;
         bool s_recording = false;
         std::chrono::steady_clock::time_point s_recordStart;
@@ -7865,7 +7866,7 @@ void main()
         e = { key, s_submissionCounter, offset, 0, 1 };
     }
 
-    // Settings > Display > Log Colour Filter (diagnostic). With it on, a few
+    // NFSMW_COLOUR_PASS_LOG=1 (it found the yellow filter, below). With it on, a few
     // frames of full-screen-looking draws (a rectangle list, or six vertices or
     // fewer) log their pixel shader's float constants, so the game's colour
     // filter shows up with its real numbers on the 360: ps hash, texture count,
@@ -7881,7 +7882,8 @@ void main()
         static uint64_t armedFrame = 0, nextAuto = 0, countedFrame = 0;
         static uint32_t lines = 0, autoWindows = 0, drawsNow = 0, drawsBefore = 0;
         static std::vector<uint64_t> seen;
-        const bool on = settings::GetBool(settings::Id::GameYellowFilter);
+        static const bool logOn = [] { const char* v = std::getenv("NFSMW_COLOUR_PASS_LOG"); return v && v[0] == '1'; }();
+        const bool on = logOn;
         if (wasOn < 0)
             wasOn = on;  // saved on at launch: not a switch-on
         if (s_frame != countedFrame)
@@ -7943,6 +7945,25 @@ void main()
             fprintf(stderr, "[colour-pass]   c%u = %.4f %.4f %.4f %.4f\n", reg, f[0], f[1], f[2], f[3]);
             lines++;
         }
+    }
+
+    // Settings > Display > Remove Game Yellow Filter. The game's final HDR
+    // composite (pixel shader d52a5eb6c17f9598: five textures, the luminance
+    // weights 0.2125 0.7154 0.0721 in c0) takes a colour curve in c6-c9 whose
+    // y, z, w are one tint scaled per row: red 0.85, green 0.75, blue 0.25 (the
+    // owner's race log, 2026-11-01, four captures, the same every time). The
+    // low blue is Most Wanted's yellow. Here the blue of each of those rows is
+    // set to the mean of its red and green, in the ring copy only: the curve
+    // stays, the yellow goes. A row that doesn't look like that tint (blue not
+    // well under red and green, or signs that differ) is left alone.
+    constexpr uint64_t kColourCurvePs = 0xD52A5EB6C17F9598ull;
+    static void NeutralColourCurveRow(float* v)
+    {
+        const float r = v[1], g = v[2], b = v[3];
+        const bool sameSign = (r > 0 && g > 0 && b > 0) || (r < 0 && g < 0 && b < 0);
+        if (!sameSign || std::fabs(b) > 0.6f * std::min(std::fabs(r), std::fabs(g)))
+            return;
+        v[3] = 0.5f * (r + g);
     }
 
     void Draw(uint32_t initiatorValue, uint32_t dmaBase, uint32_t dmaSizeValue)
@@ -8515,6 +8536,7 @@ void main()
             return n;
         };
         const uint32_t vsSlots = stageSlots(constLayoutVs), psSlots = stageSlots(constLayoutPs);
+        const bool neutralCurve = s_ps->hash == kColourCurvePs && settings::GetBool(settings::Id::GameYellowFilter);
         DumpColourPassConstants(initiator.prim_type == xenos::PrimitiveType::kRectangleList, vertexCount);
         const VkDeviceSize constantsBytes = kFloatConstOffset + VkDeviceSize(vsSlots + psSlots) * 16;
         // Snapshots served from an earlier copy in this submission (decided
@@ -8530,7 +8552,7 @@ void main()
         {
             bool uploadConstants = g_constantsDirty.load(std::memory_order_relaxed) ||
                 s_lastConstantsSubmission != s_submissionCounter || !s_recording ||
-                constLayoutVs != s_lastConstLayoutVs || constLayoutPs != s_lastConstLayoutPs;
+                constLayoutVs != s_lastConstLayoutVs || constLayoutPs != s_lastConstLayoutPs || neutralCurve != s_lastNeutralCurve;
             bool anyReused = false;
             VkDeviceSize snapshotBytes = 0;
             for (uint32_t i = 0; i < copyCount; i++)
@@ -8567,20 +8589,30 @@ void main()
                 auto copyStage = [&](const Shader* packed, uint32_t regBase, uint32_t slotBase) {
                     const uint32_t* src = &s_regs[XE_GPU_REG_SHADER_CONSTANT_000_X + regBase * 4];
                     uint8_t* dst = c + kFloatConstOffset + slotBase * 16;
+                    const bool curve = neutralCurve && regBase == 256;  // (the pixel shader's c6-c9)
                     if (!packed)
                     {
                         memcpy(dst, src, 256 * 16);
+                        if (curve)
+                            for (uint32_t r = 6; r <= 9; r++)
+                                NeutralColourCurveRow(reinterpret_cast<float*>(dst + r * 16));
                         return;
                     }
                     uint32_t slot = 0;
                     for (uint32_t q = 0; q < 4; q++)
                         for (uint64_t bits = packed->info.constUsed[q]; bits; bits &= bits - 1, slot++)
-                            memcpy(dst + slot * 16, src + (q * 64 + uint32_t(__builtin_ctzll(bits))) * 4, 16);
+                        {
+                            const uint32_t reg = q * 64 + uint32_t(__builtin_ctzll(bits));
+                            memcpy(dst + slot * 16, src + reg * 4, 16);
+                            if (curve && reg >= 6 && reg <= 9)
+                                NeutralColourCurveRow(reinterpret_cast<float*>(dst + slot * 16));
+                        }
                 };
                 copyStage(constLayoutVs, 0, 0);          // pc.vsConstBase
                 copyStage(constLayoutPs, 256, vsSlots);  // pc.psConstBase
                 s_lastConstLayoutVs = constLayoutVs;
                 s_lastConstLayoutPs = constLayoutPs;
+                s_lastNeutralCurve = neutralCurve;
                 memcpy(c + kFetchOffset, &s_regs[XE_GPU_REG_SHADER_CONSTANT_FETCH_00_0], 48 * 16);
                 memcpy(c + kBoolsOffset, &s_regs[XE_GPU_REG_SHADER_CONSTANT_BOOL_000_031], 2 * 16);
                 memcpy(c + kLoopsOffset, &s_regs[XE_GPU_REG_SHADER_CONSTANT_LOOP_00], 8 * 16);

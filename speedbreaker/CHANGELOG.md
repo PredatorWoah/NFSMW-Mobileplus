@@ -4,6 +4,20 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.36 (2026-11-01)
+
+- Remove Game Yellow Filter, for real (Settings > Display, on by default on
+  Android). The race captures found it: the game's final HDR pass (five
+  textures, luminance weights in c0) takes a colour curve in c6-c9 whose
+  red, green and blue are one tint scaled per row, 0.85, 0.75, 0.25, the
+  same in all four captures. The low blue is the yellow. With the option on,
+  each of those rows gets its blue set to the mean of its red and green, for
+  that one shader only; the rest of the game's look (bloom, contrast,
+  vignette) stays. Off is the original Xbox 360 picture. Leave Yellow Tint
+  Removal at 0 with it.
+- The SAVED touch layout is gone (its stored positions are deleted): the
+  layout switch toggles RACING and XBOX.
+
 ## v0.1.35 (2026-11-01)
 
 - Log Colour Filter (diagnostic) now catches the race. The 0.1.34 log only

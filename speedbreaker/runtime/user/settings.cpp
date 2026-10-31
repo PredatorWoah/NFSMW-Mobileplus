@@ -50,11 +50,13 @@ namespace settings
         constexpr int kGpuSchedulingDefault = 2;
         constexpr int kGpuWorkDefault = 1;
         constexpr bool kPowerHintsHidden = false;
+        constexpr int kNoYellowFilterDefault = 1;
 #else
         constexpr bool kGpuSchedulingHidden = true;
         constexpr int kGpuSchedulingDefault = 0;
         constexpr int kGpuWorkDefault = 0;
         constexpr bool kPowerHintsHidden = true;
+        constexpr int kNoYellowFilterDefault = 0;
 #endif
         constexpr EnumEntry kGpuSchedulingEntries[] = {
             { 0, "conservative", "Conservative" },
@@ -171,12 +173,12 @@ namespace settings
               .table = "video", .key = "yellow_tint", .label = "Yellow Tint Removal",
               .description = "Takes the yellow cast out of the game's picture: lifts blue, most in the mid-tones, and trims red and green a little, a step at a time. 0 is the original look; 5 is about neutral in daylight (it varies a little with the scene). Menus and the HUD drawn over the picture are not touched.",
               .env = "NFSMW_YELLOW_TINT", .defaultValue = 0, .min = 0, .max = 5, .step = 1 },
-            // Diagnostic for finding the game's own yellow filter: for three frames after it is switched on, the pixel
-            // shader constants of every full-screen draw go to the log (gpu/renderer.cpp, DumpColourPassConstants).
+            // The game's own yellow filter: the tint (0.85, 0.75, 0.25) in its final HDR pass's colour curve (gpu/renderer.cpp,
+            // kColourCurvePs). On by default on Android (the owner asked for it off).
             { .id = Id::GameYellowFilter, .category = Category::Display, .type = Type::Bool, .apply = Apply::Live,
-              .table = "video", .key = "remove_game_yellow_filter", .label = "Log Colour Filter (diagnostic)",
-              .description = "Diagnostic, changes nothing in the picture. Switched on (or left on), writes the colour-correction numbers of a few full-screen frames to the log, once on switching on and again every 30 seconds of racing (four times), so the game's own yellow filter can be found and switched off at its source. Switch it on in a race, drive 2 minutes, and send the log.",
-              .env = "NFSMW_REMOVE_YELLOW_FILTER", .defaultValue = 0 },
+              .table = "video", .key = "no_yellow_filter", .label = "Remove Game Yellow Filter",
+              .description = "Turns off the game's own yellow colour filter at its source (its final colour pass tints the picture red 0.85, green 0.75, blue 0.25; this makes the blue match). The rest of the game's look stays. Off: the original Xbox 360 picture.",
+              .env = "NFSMW_REMOVE_YELLOW_FILTER", .defaultValue = kNoYellowFilterDefault },
             { .id = Id::Sharpening, .category = Category::Graphics, .type = Type::Float, .apply = Apply::Live,
               .table = "video", .key = "sharpening", .label = "Sharpening",
               .description = "Extra sharpness for bicubic upscaling. 0 turns it off.",
