@@ -21,6 +21,11 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: el filtro amarillo, también en la memoria física** (0.1.33). El registro de la
+  0.1.32: tres escaneos de 256-282 MB sin nada, porque solo se miraban los montones virtuales y el
+  juego guarda gran parte de sus datos en la ventana física (0xA0000000-0xBFFFFFFF). Ahora la
+  incluye, busca también los presets amarillos de la comunidad y registra "candidatos" (triples con
+  forma de tinte junto a números de bloom) con los floats de alrededor.
 - **SpeedBreaker: Remove Game Yellow Filter, segundo intento** (0.1.32). El registro de la 0.1.31
   no mostró ni una coincidencia (la suposición en la GPU era falsa). Ahora actúa sobre los datos:
   el juego trae el volcado de su `VisualLookEffect` (desaturation, blackbloom, colorbloom,
