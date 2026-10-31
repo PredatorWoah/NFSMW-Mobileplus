@@ -165,11 +165,11 @@ namespace settings
               .table = "video", .key = "xbox_display_gamma", .label = "Xbox 360 Display Gamma",
               .description = "The gamma ramp the game itself sets for a real Xbox 360's TV output: a little deeper shadows and brighter mid-tones, as on the console. Off: the flatter picture of SpeedBreaker 0.1.3 and earlier.",
               .env = "NFSMW_DISPLAY_GAMMA", .defaultValue = 1 },
-            // Yellow Tint: the game's picture is graded olive-yellow (blue 1.4-1.6x under red and
-            // green in the shadows, measured on a phone screenshot); 0..5 lifts the blue back (video/display_tone.h).
+            // Yellow Tint Removal: the game's picture is graded yellow (daylight road red 133, green 127, blue 94);
+            // 0..5 lifts blue most in the mid-tones and trims red and green a little (video/display_tone.h).
             { .id = Id::YellowTint, .category = Category::Display, .type = Type::Int, .apply = Apply::Live,
               .table = "video", .key = "yellow_tint", .label = "Yellow Tint Removal",
-              .description = "Takes the yellow-olive cast out of the game's picture by lifting its blue, mostly in the shadows, a step at a time. 0 is the original look; 5 removes the cast. Menus and the HUD drawn over the picture are not touched.",
+              .description = "Takes the yellow cast out of the game's picture: lifts blue, most in the mid-tones, and trims red and green a little, a step at a time. 0 is the original look; 5 is about neutral in daylight (it varies a little with the scene). Menus and the HUD drawn over the picture are not touched.",
               .env = "NFSMW_YELLOW_TINT", .defaultValue = 0, .min = 0, .max = 5, .step = 1 },
             { .id = Id::Sharpening, .category = Category::Graphics, .type = Type::Float, .apply = Apply::Live,
               .table = "video", .key = "sharpening", .label = "Sharpening",

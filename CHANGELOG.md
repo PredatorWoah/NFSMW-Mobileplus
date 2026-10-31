@@ -21,6 +21,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: Yellow Tint Removal funciona de verdad** (0.1.30). La curva de la 0.1.29 se
+  calibró con un refugio oscuro y subía el azul unos 11 niveles en los medios tonos, donde una
+  carretera a pleno día (rojo 133, verde 127, azul 94) necesita unos 30. Ahora es una parábola
+  sobre el azul (máxima en los medios tonos, cero en negro y blanco) y rojo/verde recortados un
+  poco: la carretera sale 127/121/123 y el cielo sigue blanco.
+
 - **SpeedBreaker: AA y nitidez apagados por defecto en Android, y Yellow Tint Removal** (0.1.29).
   Anti-aliasing (~0,65 ms) y nitidez bicúbica quedan apagados (una vez, si venían con los valores
   antiguos; el Quality Preset los devuelve). Nuevo Settings > Display > **Yellow Tint Removal**

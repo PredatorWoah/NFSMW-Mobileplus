@@ -4,6 +4,16 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.30 (2026-10-31)
+
+- Yellow Tint Removal now works: 0.1.29's curve was calibrated on a dark
+  safe house and lifted blue by about 11 levels in the mid-tones, where a
+  daylight road (red 133, green 127, blue 94) needs about 30. The bump is now
+  a parabola on blue, largest in the mid-tones and zero at black and white
+  (+0.12 at the top step), with red and green trimmed by 0.025: the road
+  comes out 127/121/123 and the sky stays white. Scenes already neutral or
+  bluish (deep shadows) go a little cooler; pick the step you like.
+
 ## v0.1.29 (2026-10-31)
 
 - Anti-aliasing and sharpening are off by default on Android (about 1.5 ms of

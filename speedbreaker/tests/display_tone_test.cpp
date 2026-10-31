@@ -370,25 +370,34 @@ namespace
         CHECK(!video::tone::Neutral(0, false, 1), "tint 1 is not");
         const video::tone::Lut plain = video::tone::BuildLut(0, nullptr, 0);
         const video::tone::Lut full = video::tone::BuildLut(0, nullptr, 5);
-        bool same = true;
-        for (uint32_t k = 0; k < 256; k++)
-            same = same && plain.entry[k][0] == full.entry[k][0] && plain.entry[k][1] == full.entry[k][1];
-        CHECK(same, "red and green are never touched");
-        CHECK(full.entry[0][2] == 0.0f && full.entry[255][2] == 1.0f, "black and white stay put");
-        // The measured cast (phone screenshot): blue 12.2 under red 17.7 in the
-        // shadows, 45.2 under 52 in the lights. At the top step each ends within
-        // 6% of the red it sat under.
-        double shadow = video::tone::Sample(full, 2, 12.2 / 255.0) * 255.0, light = video::tone::Sample(full, 2, 45.2 / 255.0) * 255.0;
-        CHECK(std::abs(shadow / 17.7 - 1.0) < 0.06, "shadow blue %.1f vs red 17.7", shadow);
-        CHECK(std::abs(light / 52.0 - 1.0) < 0.10, "light blue %.1f vs red 52", light);
-        // Monotonic in the step, and brighter blue never darkens anything.
+        for (uint32_t c = 0; c < 3; c++)
+            CHECK(full.entry[0][c] == 0.0f && full.entry[255][c] == 1.0f, "black and white stay put (channel %u)", c);
+        // The measured casts (phone screenshots), 8-bit levels in -> out.
+        auto out = [&](double r, double g, double b, double* o) {
+            o[0] = video::tone::Sample(full, 0, r / 255.0) * 255.0;
+            o[1] = video::tone::Sample(full, 1, g / 255.0) * 255.0;
+            o[2] = video::tone::Sample(full, 2, b / 255.0) * 255.0;
+        };
+        double road[3], house[3], sky[3];
+        out(133, 127, 94, road);   // daylight road: blue 1.4x under
+        out(17.7, 19.2, 12.2, house);  // safe house shadows
+        out(254, 255, 232, sky);   // the sky, near white
+        auto spread = [](const double* c) { return std::max({ c[0], c[1], c[2] }) / std::min({ c[0], c[1], c[2] }); };
+        CHECK(spread(road) < 1.08, "road %.1f %.1f %.1f (spread %.2f, was 1.41)", road[0], road[1], road[2], spread(road));
+        CHECK(spread(house) < 1.15, "safe house %.1f %.1f %.1f (spread %.2f, was 1.57)", house[0], house[1], house[2], spread(house));
+        CHECK(sky[2] > 232.0 && sky[0] > 250.0, "the sky stays white: %.1f %.1f %.1f", sky[0], sky[1], sky[2]);
+        // Monotonic in the step and in the value, so nothing inverts or bands.
         double last = 0;
         for (int32_t step = 0; step <= 5; step++)
         {
-            double v = video::tone::Sample(video::tone::BuildLut(0, nullptr, step), 2, 0.1);
+            double v = video::tone::Sample(video::tone::BuildLut(0, nullptr, step), 2, 0.4);
             CHECK(v >= last, "step %d: %.4f after %.4f", step, v, last);
             last = v;
         }
+        for (uint32_t c = 0; c < 3; c++)
+            for (uint32_t k = 1; k < 256; k++)
+                CHECK(full.entry[k][c] >= full.entry[k - 1][c], "channel %u falls at %u", c, k);
+        (void)plain;
     }
 }
 
