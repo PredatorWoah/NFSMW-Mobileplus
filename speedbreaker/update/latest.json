@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 30,
-  "versionName": "0.1.29",
-  "notes": "Anti-aliasing and sharpening are off by default (a bit more GPU headroom in the city), and a new Settings > Display > Yellow Tint Removal takes the yellow-olive cast out of the game's picture.",
+  "versionCode": 31,
+  "versionName": "0.1.30",
+  "notes": "Yellow Tint Removal reworked so it actually shows in daylight: it lifts blue in the mid-tones (the road is neutral at step 5) and trims red and green a little. Settings > Display.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
