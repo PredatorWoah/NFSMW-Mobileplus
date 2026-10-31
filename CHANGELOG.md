@@ -21,6 +21,14 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: fuera el escáner de memoria; diagnóstico del filtro** (0.1.34). El registro de la
+  0.1.33: 733 MB escaneados (virtual y física) sin ningún tinte conocido ni par de bloom, de modo
+  que la 360 no guarda el filtro como el PC, y el escaneo cada 5 s costaba fotogramas (35-58
+  tirones por minuto con la opción, 17 sin ella). La opción pasa a "Log Colour Filter
+  (diagnostic)": al activarla, los tres fotogramas siguientes escriben en el registro las
+  constantes del shader de píxeles de cada dibujo a pantalla completa (`[colour-pass]`). No cambia
+  la imagen. Yellow Tint Removal (0-5) sigue siendo el arreglo que funciona.
+
 - **SpeedBreaker: el filtro amarillo, también en la memoria física** (0.1.33). El registro de la
   0.1.32: tres escaneos de 256-282 MB sin nada, porque solo se miraban los montones virtuales y el
   juego guarda gran parte de sus datos en la ventana física (0xA0000000-0xBFFFFFFF). Ahora la

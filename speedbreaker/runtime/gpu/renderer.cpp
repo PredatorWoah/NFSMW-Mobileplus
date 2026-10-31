@@ -7865,6 +7865,45 @@ void main()
         e = { key, s_submissionCounter, offset, 0, 1 };
     }
 
+    // Settings > Display > Log Colour Filter (diagnostic). For three frames after
+    // it is switched on, every full-screen-looking draw (a rectangle list, or six
+    // vertices or fewer) logs its pixel shader's float constants, so the game's
+    // colour filter shows up with its real numbers on the 360: ps hash, texture
+    // count, the constants (register, x y z w) that are not all zero. At most 700
+    // lines a switch-on. Costs nothing otherwise.
+    static void DumpColourPassConstants(bool rect, uint32_t vertexCount)
+    {
+        static bool wasOn = false;
+        static uint64_t armedFrame = 0;
+        static uint32_t lines = 0;
+        const bool on = settings::GetBool(settings::Id::GameYellowFilter);
+        if (on && !wasOn)
+        {
+            armedFrame = s_frame;
+            lines = 0;
+            fprintf(stderr, "[colour-pass] logging the full-screen draws of the next 3 frames (from frame %llu)\n", (unsigned long long)s_frame);
+        }
+        wasOn = on;
+        if (!on || s_frame > armedFrame + 3 || lines >= 700 || !(rect || vertexCount <= 6))
+            return;
+        fprintf(stderr, "[colour-pass] frame %llu: ps %016llx vs %016llx, %s, %u vertices, %d textures, constants %s\n", (unsigned long long)s_frame,
+            (unsigned long long)s_ps->hash, (unsigned long long)s_vs->hash, rect ? "rect list" : "other", vertexCount,
+            __builtin_popcount(s_ps->info.texture2DMask), s_ps->info.constPacked ? "packed" : "all");
+        lines++;
+        for (uint32_t reg = 0; reg < 256 && lines < 700; reg++)
+        {
+            if (s_ps->info.constPacked && !((s_ps->info.constUsed[reg / 64] >> (reg % 64)) & 1))
+                continue;
+            const uint32_t* v = &s_regs[XE_GPU_REG_SHADER_CONSTANT_000_X + (256 + reg) * 4];
+            float f[4];
+            memcpy(f, v, 16);
+            if (f[0] == 0.0f && f[1] == 0.0f && f[2] == 0.0f && f[3] == 0.0f)
+                continue;
+            fprintf(stderr, "[colour-pass]   c%u = %.4f %.4f %.4f %.4f\n", reg, f[0], f[1], f[2], f[3]);
+            lines++;
+        }
+    }
+
     void Draw(uint32_t initiatorValue, uint32_t dmaBase, uint32_t dmaSizeValue)
     {
         if (!s_vk)
@@ -8435,6 +8474,7 @@ void main()
             return n;
         };
         const uint32_t vsSlots = stageSlots(constLayoutVs), psSlots = stageSlots(constLayoutPs);
+        DumpColourPassConstants(initiator.prim_type == xenos::PrimitiveType::kRectangleList, vertexCount);
         const VkDeviceSize constantsBytes = kFloatConstOffset + VkDeviceSize(vsSlots + psSlots) * 16;
         // Snapshots served from an earlier copy in this submission (decided
         // again after every submit, which retires them).
