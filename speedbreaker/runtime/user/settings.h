@@ -48,6 +48,7 @@ namespace settings
         AspectRatio,
         Brightness,    // the game's picture (video/display_tone.h)
         DisplayGamma,  // the 360's display gamma ramp (video/display_gamma.h)
+        YellowTint,    // takes the game's yellow cast out of its picture (video/display_tone.h)
         Sharpening,
         Anisotropy,
         Mipmaps,
