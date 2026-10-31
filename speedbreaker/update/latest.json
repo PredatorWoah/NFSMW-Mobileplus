@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 38,
-  "versionName": "0.1.37",
-  "notes": "New cheat: 2x nitro power for your car only (CHEATS, then Save & Restart). Rivals, cops and traffic keep their normal nitro.",
+  "versionCode": 39,
+  "versionName": "0.1.38",
+  "notes": "New cheats: sure-shot pink slip (the first marker you flip after beating a Blacklist rival is their pink slip) and plenty of upgrade markers (two of every part marker always in your inventory). CHEATS > Career, then Save & Restart.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
