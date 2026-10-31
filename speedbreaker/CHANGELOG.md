@@ -4,6 +4,19 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.34 (2026-11-01)
+
+- The memory scanner is gone. The 0.1.33 log: 733 MB scanned (virtual and
+  physical memory), no known tint numbers and no bloom pair in any of it, so
+  the 360's filter isn't stored like the PC's, and the scan every 5 s cost
+  frames (35-58 hitches a minute with it on, 17 with it off).
+- The option is now "Log Colour Filter (diagnostic)": switched on, the next
+  three frames write every full-screen draw's pixel shader constants to the
+  log (`[colour-pass]`: shader, texture count, each non-zero constant). It
+  changes nothing in the picture and costs nothing otherwise; it is how the
+  filter's real numbers and the draw that applies them get found.
+  Yellow Tint Removal (0-5) stays as the working fix.
+
 ## v0.1.33 (2026-11-01)
 
 - Remove Game Yellow Filter looks in the physical memory window too. The

@@ -171,11 +171,11 @@ namespace settings
               .table = "video", .key = "yellow_tint", .label = "Yellow Tint Removal",
               .description = "Takes the yellow cast out of the game's picture: lifts blue, most in the mid-tones, and trims red and green a little, a step at a time. 0 is the original look; 5 is about neutral in daylight (it varies a little with the scene). Menus and the HUD drawn over the picture are not touched.",
               .env = "NFSMW_YELLOW_TINT", .defaultValue = 0, .min = 0, .max = 5, .step = 1 },
-            // The game's own filter: its VisualLookEffect colortint, three floats (PC defaults 0.88, 0.80, 0.44; the low
-            // blue is the yellow). Raised in the game's memory (game/yellow_filter.cpp, experimental).
+            // Diagnostic for finding the game's own yellow filter: for three frames after it is switched on, the pixel
+            // shader constants of every full-screen draw go to the log (gpu/renderer.cpp, DumpColourPassConstants).
             { .id = Id::GameYellowFilter, .category = Category::Display, .type = Type::Bool, .apply = Apply::Live,
-              .table = "video", .key = "remove_game_yellow_filter", .label = "Remove Game Yellow Filter",
-              .description = "Experimental. Finds the game's own colour filter (its yellow tint, three numbers in its data) in memory and raises its blue, as PC modders do, so the picture is no longer yellow at the source. Menus and the HUD are not touched. If nothing changes, send the log.",
+              .table = "video", .key = "remove_game_yellow_filter", .label = "Log Colour Filter (diagnostic)",
+              .description = "Diagnostic, changes nothing in the picture: when switched on, writes the colour-correction numbers of the next three frames to the log, so the game's own yellow filter can be found and switched off at its source. Switch it on for a second in a race, then off, and send the log.",
               .env = "NFSMW_REMOVE_YELLOW_FILTER", .defaultValue = 0 },
             { .id = Id::Sharpening, .category = Category::Graphics, .type = Type::Float, .apply = Apply::Live,
               .table = "video", .key = "sharpening", .label = "Sharpening",
