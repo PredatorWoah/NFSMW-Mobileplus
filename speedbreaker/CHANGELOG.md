@@ -4,6 +4,16 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.33 (2026-11-01)
+
+- Remove Game Yellow Filter looks in the physical memory window too. The
+  0.1.32 log: three scans of 256-282 MB, nothing found, because only the
+  virtual heaps were scanned and the game keeps much of its loaded data in
+  the physical window (0xA0000000-0xBFFFFFFF). Also looks for the community's
+  Xbox 360-like tint presets, and logs "candidate" triples (tint-shaped,
+  beside bloom-like numbers such as 1.75) with the floats around them, so
+  the layout shows even if the numbers differ from the PC's.
+
 ## v0.1.32 (2026-11-01)
 
 - Remove Game Yellow Filter, second try. The 0.1.31 log showed no match at

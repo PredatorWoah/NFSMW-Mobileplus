@@ -13,6 +13,7 @@ namespace
     constexpr size_t kMaxSpots = 64;
     constexpr uint32_t kScanEveryFrames = 300;  // about 5 s at 60 fps
     constexpr uint32_t kFirstGuest = 0x00010000, kEndGuest = 0x7F000000;
+    constexpr uint32_t kPhysicalFirst = 0xA0000000, kPhysicalEnd = 0xC0000000;
 
     struct Spot
     {
@@ -52,7 +53,9 @@ namespace
     // [address, address + bytes) committed and writable.
     bool Usable(uint32_t address, uint32_t bytes)
     {
-        if (address < kFirstGuest || (address & 3) || uint64_t(address) + bytes > kEndGuest)
+        const bool virtualRange = address >= kFirstGuest && uint64_t(address) + bytes <= kEndGuest;
+        const bool physicalRange = address >= kPhysicalFirst && uint64_t(address) + bytes <= kPhysicalEnd;
+        if ((address & 3) || !(virtualRange || physicalRange))
             return false;
         vmem::PageHeap* heap = vmem::HeapFor(address);
         vmem::RegionInfo info{};
@@ -87,14 +90,42 @@ namespace
         LogSpot(how, address);
     }
 
-    // Background: every committed read/write region of the two virtual heaps.
+    float FromBits(uint32_t hostBits)
+    {
+        const uint32_t bits = ByteSwap(hostBits);
+        float f;
+        memcpy(&f, &bits, 4);
+        return f;
+    }
+
+    bool NearFloat(const uint32_t* words, size_t index, size_t count, float v)
+    {
+        for (int d = -6; d <= 9; d++)
+        {
+            const int64_t j = int64_t(index) + d;
+            if (j >= 0 && size_t(j) < count && std::fabs(FromBits(words[j]) - v) < 1e-6f)
+                return true;
+        }
+        return false;
+    }
+
+    // Background: every committed read/write region of the virtual heaps and of
+    // the physical window (where the game keeps much of its loaded data).
     void Scan()
     {
-        const uint32_t exact[3] = { BigEndianBits(0.88f), BigEndianBits(0.80f), BigEndianBits(0.44f) };
+        struct Known { const char* name; uint32_t bits[3]; };
+        const Known known[] = {
+            { "PC default 0.88 0.80 0.44", { BigEndianBits(0.88f), BigEndianBits(0.80f), BigEndianBits(0.44f) } },
+            { "X360-like 0.68 0.58 0.03", { BigEndianBits(0.68f), BigEndianBits(0.58f), BigEndianBits(0.03f) } },
+            { "Diamond 0.90 1.00 0.46", { BigEndianBits(0.90f), BigEndianBits(1.00f), BigEndianBits(0.46f) } },
+        };
         const uint32_t pair[2] = { BigEndianBits(0.9f), BigEndianBits(1.75f) };
         uint64_t bytes = 0;
-        uint32_t exactFound = 0, pairFound = 0;
-        for (uint64_t at = kFirstGuest; at < kEndGuest;)
+        uint32_t exactFound = 0, pairFound = 0, candidates = 0;
+        static uint32_t candidateLogged = 0;
+        const uint32_t ranges[][2] = { { kFirstGuest, kEndGuest }, { kPhysicalFirst, kPhysicalEnd } };
+        for (const auto& range : ranges)
+        for (uint64_t at = range[0]; at < range[1];)
         {
             vmem::PageHeap* heap = vmem::HeapFor(uint32_t(at));
             vmem::RegionInfo info{};
@@ -103,38 +134,57 @@ namespace
                 at += 0x10000;
                 continue;
             }
-            const uint64_t end = std::min<uint64_t>(uint64_t(info.baseAddress) + info.regionSize, kEndGuest);
-            if (info.state == vmem::X_MEM_COMMIT && (info.protect & (0x04 | 0x40)) && info.baseAddress >= kFirstGuest && end > info.baseAddress + 16)
+            const uint64_t end = std::min<uint64_t>(uint64_t(info.baseAddress) + info.regionSize, range[1]);
+            if (info.state == vmem::X_MEM_COMMIT && (info.protect & (0x04 | 0x40)) && info.baseAddress >= range[0] && end > info.baseAddress + 16)
             {
                 const uint32_t* words = static_cast<const uint32_t*>(g_memory.Translate(info.baseAddress));
                 const size_t count = size_t(end - info.baseAddress) / 4;
                 bytes += count * 4;
                 for (size_t i = 0; i + 3 <= count; i++)
                 {
-                    if (words[i] == exact[0] && words[i + 1] == exact[1] && words[i + 2] == exact[2])
+                    const uint32_t first = ByteSwap(words[i]);
+                    // Floats from 0.5 to a little over 1 only (cheap reject).
+                    if (first < 0x3F000000u || first > 0x3F866666u)
+                        continue;
+                    const uint32_t address = info.baseAddress + uint32_t(i * 4);
+                    const char* hit = nullptr;
+                    for (const Known& k : known)
+                        if (words[i] == k.bits[0] && words[i + 1] == k.bits[1] && words[i + 2] == k.bits[2])
+                            hit = k.name;
+                    if (hit)
                     {
                         exactFound++;
-                        Remember("exact 0.88 0.80 0.44", info.baseAddress + uint32_t(i * 4));
+                        Remember(hit, address);
+                        continue;
                     }
-                    else if (words[i] == pair[0] && i + 5 <= count && words[i + 1] == pair[1])
+                    const float r = FromBits(words[i]), g = FromBits(words[i + 1]), b = FromBits(words[i + 2]);
+                    if (!game::visual_filter::TintShape(r, g, b))
+                        continue;
+                    // A tint-shaped triple beside the bloom numbers (the PC's 0.9 / 1.75, the community's 1.2 / 1.8 / 2.5 / 0.7).
+                    const bool bloom = NearFloat(words, i, count, 1.75f) || NearFloat(words, i, count, 1.2f) || NearFloat(words, i, count, 0.7f) ||
+                        NearFloat(words, i, count, 1.8f) || NearFloat(words, i, count, 2.5f);
+                    if (i >= 2 && words[i - 2] == pair[0] && words[i - 1] == pair[1])
                     {
-                        // blackbloom, colorbloom, then the tint if the layout follows the game's debug print order.
                         pairFound++;
-                        const uint32_t tint = info.baseAddress + uint32_t(i * 4) + 8;
-                        const float r = ReadFloat(tint), g = ReadFloat(tint + 4), b = ReadFloat(tint + 8);
-                        if (game::visual_filter::TintShape(r, g, b))
-                            Remember("after blackbloom 0.9, colorbloom 1.75", tint);
-                        else if (pairFound <= 4)
-                            LogSpot("blackbloom 0.9, colorbloom 1.75 (no tint after it)", tint);
+                        Remember("after blackbloom 0.9, colorbloom 1.75", address);
+                    }
+                    else if (bloom)
+                    {
+                        candidates++;
+                        if (candidateLogged < 24)
+                        {
+                            candidateLogged++;
+                            LogSpot("candidate: tint-shaped triple beside bloom-like numbers", address);
+                        }
                     }
                 }
             }
             at = end;
         }
         const uint32_t scan = ++s_scans;
-        if (scan <= 3 || exactFound || pairFound)
-            fprintf(stderr, "[game-filter] scan %u: %llu MB of guest memory, %u exact tint triples, %u colorbloom pairs, %zu spots\n", scan,
-                (unsigned long long)(bytes >> 20), exactFound, pairFound, s_spots.size());
+        if (scan <= 4 || exactFound || pairFound)
+            fprintf(stderr, "[game-filter] scan %u: %llu MB of guest memory, %u known tint triples, %u colorbloom pairs, %u candidates, %zu spots\n",
+                scan, (unsigned long long)(bytes >> 20), exactFound, pairFound, candidates, s_spots.size());
         s_scanning = false;
     }
 
