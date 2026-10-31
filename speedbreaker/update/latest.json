@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 31,
-  "versionName": "0.1.30",
-  "notes": "Yellow Tint Removal reworked so it actually shows in daylight: it lifts blue in the mid-tones (the road is neutral at step 5) and trims red and green a little. Settings > Display.",
+  "versionCode": 32,
+  "versionName": "0.1.31",
+  "notes": "New, experimental: Settings > Display > Remove Game Yellow Filter switches off the game's own yellow colour filter at its source (instead of correcting the picture afterwards). Turn it on, set Yellow Tint Removal back to 0, and send the log if it does nothing.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
