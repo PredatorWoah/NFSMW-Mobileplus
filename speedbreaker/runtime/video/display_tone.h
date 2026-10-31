@@ -55,22 +55,32 @@ namespace video::tone
         return e == 1.0 ? v : std::pow(v, e);
     }
 
-    // Yellow Tint Removal: the game's picture is graded olive-yellow. On a
-    // phone screenshot (a safe house, 2026-10-23) red and green sat 1.4-1.6x
-    // over blue in the shadows (8-bit levels 10-30) and 1.15-1.2x in the lights
-    // (about 50). A power curve on blue, exponent below 1, lifts the shadows
-    // most and leaves white alone: 0.89 takes 12 to 17 and 45 to 55 (ratios
-    // to red about 1.04 and 0.95: neutral either side) at the top step. Each
-    // step has 0.977 times the exponent before it (5 steps: 0.89).
+    // Yellow Tint Removal: the game's picture is graded yellow. Measured on two
+    // phone screenshots (2026-10-23, 10-31): in daylight the road read red 133,
+    // green 127, blue 94 (blue 1.4x under), the sky 254/255/232; in a safe house
+    // red and green sat 1.4-1.6x over blue at levels 10-30. The cast changes
+    // with the scene (the game's grade is per scene), so this is a correction
+    // for the usual case, not an exact inverse. Blue gets a bump: v + c *
+    // 4v(1-v), zero at black and white and largest in the mid-tones (+0.12 at
+    // v = 0.5: the road's 94 becomes 122); red and green a small negative one
+    // (-0.025: 133 and 127 become 127 and 121). Monotonic (slope at white
+    // 1 - 4c: 0.52). Step n of 5 is n/5 of both bumps.
     constexpr int32_t kTintMin = 0;
     constexpr int32_t kTintMax = 5;
-    constexpr double kTintRatio = 0.977;
+    constexpr double kTintBlueBump = 0.12;
+    constexpr double kTintRedGreenBump = 0.025;
 
-    // The exponent for blue at a Yellow Tint Removal step (clamped): 1 at 0.
-    inline double TintBlueExponent(int32_t step)
+    // v after the bump for channel `c` (0 red, 1 green, 2 blue) at a step.
+    inline double ApplyTint(double v, uint32_t c, int32_t step)
     {
         step = std::clamp(step, kTintMin, kTintMax);
-        return step == 0 ? 1.0 : std::pow(kTintRatio, double(step));
+        v = std::clamp(v, 0.0, 1.0);
+        if (step == 0)
+            return v;
+        const double strength = double(step) / double(kTintMax);
+        const double bump = 4.0 * v * (1.0 - v);
+        const double amount = c == 2 ? kTintBlueBump : -kTintRedGreenBump;
+        return std::clamp(v + amount * strength * bump, 0.0, 1.0);
     }
 
     // Nothing to apply: the presenter keeps its plain pipeline.
@@ -91,7 +101,6 @@ namespace video::tone
     inline Lut BuildLut(int32_t brightness, const display_gamma::Table* ramp, int32_t tint = 0)
     {
         Lut lut;
-        const double blue = TintBlueExponent(tint);
         for (uint32_t k = 0; k < 256; k++)
             for (uint32_t c = 0; c < 3; c++)
             {
@@ -99,8 +108,7 @@ namespace video::tone
                 v = ApplyBrightness(v, brightness);
                 // After the console's ramp and Brightness: what is left is the
                 // game's own grade, which this takes the yellow out of.
-                if (c == 2 && blue != 1.0)
-                    v = std::pow(std::clamp(v, 0.0, 1.0), blue);
+                v = ApplyTint(v, c, tint);
                 lut.entry[k][c] = float(v);
             }
         return lut;
