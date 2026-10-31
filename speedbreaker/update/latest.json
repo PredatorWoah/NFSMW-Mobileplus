@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 29,
-  "versionName": "0.1.28",
-  "notes": "Cheaper draws: each draw now uploads only the shader constants it uses (about a fifth of the data), from Codex's profile of the draw thread. Should keep 60 fps going longer before it dips.",
+  "versionCode": 30,
+  "versionName": "0.1.29",
+  "notes": "Anti-aliasing and sharpening are off by default (a bit more GPU headroom in the city), and a new Settings > Display > Yellow Tint Removal takes the yellow-olive cast out of the game's picture.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
