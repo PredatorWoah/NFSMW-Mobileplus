@@ -4,6 +4,20 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.32 (2026-11-01)
+
+- Remove Game Yellow Filter, second try. The 0.1.31 log showed no match at
+  all (the GPU-side guess was wrong), so it now works on the game's data, as
+  PC modders do: the game ships a debug print of its `VisualLookEffect`
+  (desaturation, blackbloom, colorbloom, colortint = three floats), and the
+  PC defaults for the tint are 0.88, 0.80, 0.44. The runtime looks for that
+  exact triple (or the colorbloom pair 0.9, 1.75 followed by a tint-shaped
+  triple) in committed guest memory every 5 s, keeps at most 64 spots, and
+  raises the blue to a little over the mean of red and green (0.90 on the
+  defaults; the community fix is 0.95). Each find is logged with the floats
+  around it (`[game-filter]`), so if the 360's numbers differ the log shows
+  the layout. Turning the option off puts the blue back.
+
 ## v0.1.31 (2026-11-01)
 
 - Settings > Display > Remove Game Yellow Filter (experimental, off by

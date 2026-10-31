@@ -21,6 +21,13 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: Remove Game Yellow Filter, segundo intento** (0.1.32). El registro de la 0.1.31
+  no mostró ni una coincidencia (la suposición en la GPU era falsa). Ahora actúa sobre los datos:
+  el juego trae el volcado de su `VisualLookEffect` (desaturation, blackbloom, colorbloom,
+  colortint = tres floats) y en PC el tinte por defecto es 0,88 / 0,80 / 0,44. El runtime busca
+  ese triple exacto (o el par colorbloom 0,9 / 1,75 seguido de un triple con forma de tinte) en
+  la memoria del juego cada 5 s y sube el azul (0,90 con los valores por defecto). Cada hallazgo
+  va al registro con los floats de alrededor (`[game-filter]`).
 - **SpeedBreaker: quitar el filtro amarillo del juego en su origen** (0.1.31, experimental).
   Nueva opción Settings > Display > **Remove Game Yellow Filter**: el filtro (Visual Treatment) son
   tres números de los datos del juego (en PC rojo 0,88, verde 0,80, azul 0,44) que llegan como
