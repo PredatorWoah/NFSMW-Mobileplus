@@ -16,12 +16,17 @@ extern "C" PPC_FUNC(__imp__sub_82337198);
 extern "C" PPC_FUNC(__imp__sub_8256A940);
 extern "C" PPC_FUNC(__imp__sub_82335F90);
 extern "C" PPC_FUNC(__imp__sub_82424988);
+extern "C" PPC_FUNC(__imp__sub_82586768);
+extern "C" PPC_FUNC(__imp__sub_82586B80);
+extern "C" PPC_FUNC(__imp__sub_822DADB8);
 namespace {
 bool s_cash=false;
 // Unlimited money, all cars, Challenge Series stars (Initialize; read-only after).
 bool s_money=false,s_cars=false,s_stars=false;
 // 2x nitro, the player's car only (Initialize; read-only after).
 bool s_nitro2x=false;
+// Sure-shot pink slip and plenty of upgrade markers (Initialize; read-only after).
+bool s_pinkSlip=false,s_markers=false;
 constexpr uint32_t kPayoutReturn=0x82364890;
 bool ExpectedPayoutCode() {
     // Check the owning USA call and complete conversion/add/store sequence.
@@ -57,6 +62,24 @@ bool NitroCode() {
         {0x82424BA8,0xFFE0F090},{0x82424BE4,0xD1BF00FC},{0x82424C18,0xD1BF00FC}}) &&
         Word(0x82063038)==0x3F800000;  // the 1.0 it returns when nitro is off
 }
+// Rival markers (all from the generated code). The marker store at 82A391B0:
+// 63 owned markers {type, value, 1} (12 bytes each), then six pending ones
+// (+756) and their count (+828). Types (the name table at 8290D698): 1 brakes,
+// 2 engine, 3 nos, 4 induction, 5 chassis, 6 tires, 7 transmission, 8 bodykit,
+// 9 hood, 10 spoiler, 11 rims, 12 roofscoop, 13 hud, 14 vinyls, 15 decals,
+// 16 paint, 18 pink slip (value: the rival's car), 19 cash. The marker screen
+// (sub_82586768, this = the screen) copies the six into cards at this+116
+// (type, +4 value, +8 revealed byte; their count at this+44) and on message
+// 0C407210 flips the card sub_82586B80 names: 18 adds the car to the garage,
+// 19 the cash, others go into the owned markers.
+constexpr uint32_t kMarkerStore=0x82A391B0,kFlipCard=0x0C407210,kRivalCarName=0x82076BD8;  // "BL%d"
+bool MarkerCode() {
+    return Matches({{0x825868B0,0x80DD0074},{0x825868B4,0x2F060012},{0x825868C0,0x2F060013},
+        {0x822EADE0,0x3D6082A4},{0x822EADE4,0x394B91B0},{0x822EADEC,0x392A02F4},{0x82076BD8,0x424C2564},
+        {0x82586B80,0x7D8802A6},{0x822DADB8,0x7D8802A6}});
+}
+float Float(uint32_t address) {const uint32_t w=Word(address);float f;memcpy(&f,&w,4);return f;}
+void SetWord(uint32_t address,uint32_t value) {*static_cast<uint32_t*>(g_memory.Translate(address))=ByteSwap(value);}
 // The engine's owner says what drives it: the guest's own virtual getter,
 // called the way sub_82424988 calls it. -1 when anything looks off.
 int DriverClass(PPCContext& ctx,uint8_t* base,uint32_t engine) {
@@ -148,6 +171,15 @@ void Initialize(bool supportedUsa) {
         if(line=="unlock_all_cars=1")s_cars=true;
         if(line=="challenge_stars=1")s_stars=true;
         if(line=="nitro_2x=1")s_nitro2x=true;
+        if(line=="sure_pink_slip=1")s_pinkSlip=true;
+        if(line=="plenty_markers=1")s_markers=true;
+    }
+    if(s_pinkSlip || s_markers) {
+        const bool code=supportedUsa && MarkerCode();
+        fprintf(stderr,"[cheats] sure pink slip selected=%d, plenty of markers selected=%d; eligible=%d active=%d\n",
+            s_pinkSlip,s_markers,supportedUsa,code);
+        s_pinkSlip=s_pinkSlip && code;
+        s_markers=s_markers && code;
     }
     if(s_nitro2x) {
         const bool code=supportedUsa && NitroCode();
@@ -198,6 +230,27 @@ void Initialize(bool supportedUsa) {
 }
 namespace game::cheats {
 void OnFrame() {
+    if(s_markers) {
+        // At least two owned markers of each part type (1-16), checked every
+        // five seconds; one taken in the shop comes back. Empty slots only,
+        // the type written last so a half-written entry is never seen.
+        static uint32_t frames=0;
+        if(frames++%300==0) {  // (the store is the image's own data, 82A391B0-82A3949C: always there)
+            int have[17]={};
+            for(uint32_t i=0;i<63;i++) {const uint32_t t=Word(kMarkerStore+i*12);if(t>=1 && t<=16)have[t]++;}
+            int added=0;
+            for(uint32_t i=0,type=1;i<63 && type<=16;i++) {
+                while(type<=16 && have[type]>=2)type++;
+                if(type>16)break;
+                const uint32_t slot=kMarkerStore+i*12;
+                if(Word(slot)!=0)continue;
+                SetWord(slot+4,0);SetWord(slot+8,1);SetWord(slot,type);
+                have[type]++;added++;
+            }
+            static int logged=0;
+            if(added && logged++<5)fprintf(stderr,"[cheats] plenty of markers: %d part markers added (2 of each type kept)\n",added);
+        }
+    }
     if(!s_money)return;
     const uint32_t db=Word(kCareerDatabase);
     if(!Writable(db+0x10))return;
@@ -285,4 +338,49 @@ PPC_FUNC(sub_82424988) {
         }
     }
     if(driver==0)ctx.f1.f64=1.0+2.0*(factor-1.0);
+}
+// Sure-shot pink slip: on the first flip of a rival's markers, the card under
+// the player's finger becomes the pink slip (swapped with the hidden one, or
+// made the way the game makes it, the car "BL<rival>", if none of the six is
+// one). Once a pink slip is face up, nothing changes.
+PPC_FUNC(sub_82586768) {
+    const uint32_t screen=ctx.r3.u32;
+    if(s_pinkSlip && ctx.r4.u32==kFlipCard && Writable(screen+44) && Writable(screen+116+6*12)) {
+        const uint32_t cards=Word(screen+44);
+        PPCContext call=ctx;
+        call.r3.u64=screen;
+        __imp__sub_82586B80(call,base);
+        const uint32_t pick=call.r3.u32;
+        auto card=[&](uint32_t i){return screen+116+i*12;};
+        if(cards>=1 && cards<=6 && pick<cards && !Byte(card(pick)+8) && Word(card(pick))!=18) {
+            int hidden=-1;bool faceUp=false;
+            for(uint32_t i=0;i<cards;i++) {
+                if(Word(card(i))!=18)continue;
+                if(Byte(card(i)+8))faceUp=true;
+                else hidden=int(i);
+            }
+            if(!faceUp) {
+                if(hidden>=0) {
+                    const uint32_t t=Word(card(pick)),v=Word(card(pick)+4);
+                    SetWord(card(pick),18);SetWord(card(pick)+4,Word(card(hidden)+4));
+                    SetWord(card(hidden),t);SetWord(card(hidden)+4,v);
+                    fprintf(stderr,"[cheats] sure pink slip: card %u swapped with the pink slip (card %d)\n",pick,hidden);
+                } else {
+                    const uint32_t db=Word(0x82A2C684);
+                    if(Writable(db+0x10) && Writable(Word(db+0x10)+184)) {
+                        const uint32_t rival=Byte(Word(db+0x10)+184);
+                        PPCContext make=ctx;
+                        make.r3.u64=kRivalCarName;
+                        make.r4.u64=rival;
+                        __imp__sub_822DADB8(make,base);
+                        if(make.r3.u32) {
+                            SetWord(card(pick),18);SetWord(card(pick)+4,make.r3.u32);
+                            fprintf(stderr,"[cheats] sure pink slip: no pink slip among %u markers; card %u is now rival %u's car\n",cards,pick,rival);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    __imp__sub_82586768(ctx,base);
 }

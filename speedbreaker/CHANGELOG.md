@@ -4,6 +4,21 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.38 (2026-11-01)
+
+- CHEATS > Sure-shot pink slip. After you beat a Blacklist rival, the first
+  marker you flip is the rival's pink slip: the hidden pink slip is swapped
+  under your pick just before the game reads the card, or, if none of the
+  six is a pink slip, made the way the game makes one (the car "BL<rival>").
+  Your second pick is a normal marker.
+- CHEATS > Plenty of upgrade markers. At least two of every part marker
+  (brakes, engine, nos, induction, chassis, tires, transmission, body kit,
+  hood, spoiler, rims, roof scoop, hud, vinyls, decals, paint) are kept in
+  your marker inventory, refilled every few seconds after you use one.
+- Both from the game's own marker code: the marker store at 82A391B0 (63
+  owned markers, six pending), the marker screen's cards and its flip
+  message. Apply with Save & Restart. Logged as `[cheats]`.
+
 ## v0.1.37 (2026-11-01)
 
 - CHEATS > 2x nitro power (your car only). The engine's nitro step

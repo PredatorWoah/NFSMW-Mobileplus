@@ -126,7 +126,9 @@ final class CheatsMenu {
         for (String[] m : new String[][] {
                 {"unlimited_money", "Unlimited money", "Your cash is topped back up to $100,000,000 every frame while the game runs (more is kept). Buy anything; the game saves the balance as usual."},
                 {"unlock_all_cars", "Unlock all cars", "Every car in the game's lists answers \"unlocked\", bonus cars included, and the game's own unlock-all flag is set. Dealer stock and prices stay the game's."},
-                {"challenge_stars", "Challenge Series: all completed", "The Challenge Series screen shows every event completed, and the series reward check passes. No event record is rewritten; once the game grants the reward, it keeps it."}}) {
+                {"challenge_stars", "Challenge Series: all completed", "The Challenge Series screen shows every event completed, and the series reward check passes. No event record is rewritten; once the game grants the reward, it keeps it."},
+                {"sure_pink_slip", "Sure-shot pink slip", "After you beat a Blacklist rival, the first marker you flip is always the rival's pink slip (the hidden one is swapped under your pick, or made if none of the six is one). Your second pick is a normal marker."},
+                {"plenty_markers", "Plenty of upgrade markers", "Keeps at least two of every part marker (performance and visual) in your inventory; one used in the shop comes back within a few seconds."}}) {
             CheckBox box=new CheckBox(activity);
             box.setText(m[1]);
             box.setTag(m[0]);

@@ -138,6 +138,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: pink slip seguro y marcadores de sobra** (0.1.38). Tras vencer a un rival de la Blacklist,
+  el primer marcador que destapas es su pink slip (se intercambia con el oculto justo antes de que el
+  juego lea la carta, o se crea como lo hace el juego si no hay ninguno). Y al menos dos de cada
+  marcador de pieza quedan siempre en el inventario. Desde el código de marcadores del juego: el
+  almacén en 82A391B0, las cartas de la pantalla y su mensaje de destapar.
+
 - **SpeedBreaker: nitro x2, solo tu coche** (0.1.37). El paso de nitro del motor (`sub_82424988`) devuelve
   el factor de par: 1,0 exacto, o 1,0 más el empuje del nitro mientras se usa. Con el truco, ese empuje
   se dobla para el coche cuyo dueño es de clase 0 (el jugador humano), preguntado con el mismo getter
