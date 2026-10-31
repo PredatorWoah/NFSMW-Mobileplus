@@ -138,6 +138,11 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Añadido
 
+- **SpeedBreaker: nitro x2, solo tu coche** (0.1.37). El paso de nitro del motor (`sub_82424988`) devuelve
+  el factor de par: 1,0 exacto, o 1,0 más el empuje del nitro mientras se usa. Con el truco, ese empuje
+  se dobla para el coche cuyo dueño es de clase 0 (el jugador humano), preguntado con el mismo getter
+  que usa el juego en esa función. Rivales, policía y tráfico no cambian.
+
 - **SpeedBreaker hacia la 1.0** (0.1.23): el watchdog detecta una carga parada tras su pantalla
   de carga animada (fotogramas sí, lecturas del disco y audio no, 30 s) y guarda su informe con
   las pilas, en silencio; copias de seguridad de las partidas en cada arranque (las 5 últimas) y

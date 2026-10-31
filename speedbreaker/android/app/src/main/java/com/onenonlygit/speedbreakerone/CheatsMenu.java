@@ -116,6 +116,12 @@ final class CheatsMenu {
             boxes.add(box);list.addView(box);
         }
         list.addView(note("The USA game's own debug flags: an active meter keeps its charge instead of draining. It must have charge to start, and a car without NOS gets none. Apply with Save & Restart; turn off and restart to drain normally again."));
+        CheckBox twice=new CheckBox(activity);
+        twice.setText("2x nitro power (your car only)");
+        twice.setTag("nitro_2x");
+        twice.setChecked(startup.contains("nitro_2x"));
+        boxes.add(twice);list.addView(twice);
+        list.addView(note("While your nitro fires, its push is doubled. Rivals, cops and traffic keep their normal nitro, and nothing changes when it's off. Apply with Save & Restart."));
         list.addView(heading("Career"));
         for (String[] m : new String[][] {
                 {"unlimited_money", "Unlimited money", "Your cash is topped back up to $100,000,000 every frame while the game runs (more is kept). Buy anything; the game saves the balance as usual."},
