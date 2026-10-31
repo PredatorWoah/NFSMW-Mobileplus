@@ -21,6 +21,12 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: el diagnóstico del filtro ahora capta la carrera** (0.1.35). El registro de la 0.1.34
+  solo traía los fotogramas de arranque (la opción seguía guardada como activada, no hubo
+  activación en juego). Mostraron los pases HDR del juego y un pase de composición de dos texturas
+  con constantes 1 1 1 1 y 2 0 0 1, neutro en el menú. Ahora activar la opción arma una captura y,
+  mientras sigue activa, se registra un fotograma cada 30 s de carrera (cuatro veces).
+
 - **SpeedBreaker: fuera el escáner de memoria; diagnóstico del filtro** (0.1.34). El registro de la
   0.1.33: 733 MB escaneados (virtual y física) sin ningún tinte conocido ni par de bloom, de modo
   que la 360 no guarda el filtro como el PC, y el escaneo cada 5 s costaba fotogramas (35-58
