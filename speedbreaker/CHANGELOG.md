@@ -4,6 +4,19 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.31 (2026-11-01)
+
+- Settings > Display > Remove Game Yellow Filter (experimental, off by
+  default): turns the game's own colour filter off at its source instead of
+  correcting the picture afterwards. The filter is three numbers from the
+  game's data (red 0.88, green 0.80, blue 0.44 on the PC; blue below the
+  others is the yellow). They reach the colour pass's pixel shader as a
+  constant; in a full-screen draw that samples two or more textures, a
+  constant of that shape gets its blue raised to the mean of red and green.
+  Each shader and register it touches is logged once (`[game-filter]`), so if
+  nothing changes, or something odd does, the log has the numbers. Use it
+  with Yellow Tint Removal at 0.
+
 ## v0.1.30 (2026-10-31)
 
 - Yellow Tint Removal now works: 0.1.29's curve was calibrated on a dark

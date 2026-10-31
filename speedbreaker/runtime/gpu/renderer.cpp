@@ -7865,6 +7865,37 @@ void main()
         e = { key, s_submissionCounter, offset, 0, 1 };
     }
 
+    // Settings > Display > Remove Game Yellow Filter. The game's colour pass (its
+    // "Visual Treatment") gets red, green and blue multipliers from the game's
+    // data: 0.88, 0.80, 0.44 on the PC, where blue below red and green is what
+    // makes the picture yellow, and a "less yellow" fix is blue 0.95. Seen here
+    // as a pixel shader float constant (x, y, z) in a full-screen rectangle
+    // draw that samples at least two textures. A constant that looks like it
+    // (x, y in 0.5-1, z well below both) has blue raised to their mean. Each
+    // distinct shader and register is logged once ("[game-filter]"), so a wrong
+    // guess shows in the log with the numbers.
+    static bool GameFilterShape(const float* v)
+    {
+        const float x = v[0], y = v[1], z = v[2];
+        return std::isfinite(x) && std::isfinite(y) && std::isfinite(z) && x >= 0.55f && x <= 1.0f && y >= 0.5f && y <= 1.0f &&
+            z >= 0.02f && z <= 0.65f && x - z >= 0.2f && y - z >= 0.15f && std::fabs(x - y) <= 0.25f;
+    }
+
+    static void GameFilterConstant(uint64_t pixelShader, uint32_t reg, float* v)
+    {
+        if (!GameFilterShape(v))
+            return;
+        static std::vector<uint64_t> logged;
+        const uint64_t key = pixelShader * 0x9E3779B97F4A7C15ull + reg;
+        if (logged.size() < 24 && std::find(logged.begin(), logged.end(), key) == logged.end())
+        {
+            logged.push_back(key);
+            fprintf(stderr, "[game-filter] ps %016llx c%u (%.3f, %.3f, %.3f, %.3f): blue -> %.3f\n", (unsigned long long)pixelShader, reg,
+                v[0], v[1], v[2], v[3], std::max(v[2], 0.5f * (v[0] + v[1])));
+        }
+        v[2] = std::max(v[2], 0.5f * (v[0] + v[1]));
+    }
+
     void Draw(uint32_t initiatorValue, uint32_t dmaBase, uint32_t dmaSizeValue)
     {
         if (!s_vk)
@@ -8435,6 +8466,9 @@ void main()
             return n;
         };
         const uint32_t vsSlots = stageSlots(constLayoutVs), psSlots = stageSlots(constLayoutPs);
+        // The colour filter's draw: a full-screen rectangle sampling two or more textures.
+        const bool fixGameFilter = initiator.prim_type == xenos::PrimitiveType::kRectangleList &&
+            __builtin_popcount(s_ps->info.texture2DMask) >= 2 && settings::GetBool(settings::Id::GameYellowFilter);
         const VkDeviceSize constantsBytes = kFloatConstOffset + VkDeviceSize(vsSlots + psSlots) * 16;
         // Snapshots served from an earlier copy in this submission (decided
         // again after every submit, which retires them).
@@ -8486,15 +8520,23 @@ void main()
                 auto copyStage = [&](const Shader* packed, uint32_t regBase, uint32_t slotBase) {
                     const uint32_t* src = &s_regs[XE_GPU_REG_SHADER_CONSTANT_000_X + regBase * 4];
                     uint8_t* dst = c + kFloatConstOffset + slotBase * 16;
+                    const bool filter = fixGameFilter && regBase == 256;  // (the pixel shader's)
                     if (!packed)
                     {
                         memcpy(dst, src, 256 * 16);
+                        if (filter)
+                            for (uint32_t r = 0; r < 256; r++)
+                                GameFilterConstant(s_ps->hash, r, reinterpret_cast<float*>(dst) + r * 4);
                         return;
                     }
                     uint32_t slot = 0;
                     for (uint32_t q = 0; q < 4; q++)
                         for (uint64_t bits = packed->info.constUsed[q]; bits; bits &= bits - 1, slot++)
+                        {
                             memcpy(dst + slot * 16, src + (q * 64 + uint32_t(__builtin_ctzll(bits))) * 4, 16);
+                            if (filter)
+                                GameFilterConstant(s_ps->hash, q * 64 + uint32_t(__builtin_ctzll(bits)), reinterpret_cast<float*>(dst + slot * 16));
+                        }
                 };
                 copyStage(constLayoutVs, 0, 0);          // pc.vsConstBase
                 copyStage(constLayoutPs, 256, vsSlots);  // pc.psConstBase

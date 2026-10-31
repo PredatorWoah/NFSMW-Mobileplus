@@ -21,6 +21,13 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: quitar el filtro amarillo del juego en su origen** (0.1.31, experimental).
+  Nueva opción Settings > Display > **Remove Game Yellow Filter**: el filtro (Visual Treatment) son
+  tres números de los datos del juego (en PC rojo 0,88, verde 0,80, azul 0,44) que llegan como
+  constante al shader de píxeles del pase de color; en un dibujo de pantalla completa que muestrea
+  dos o más texturas, una constante con esa forma sube su azul a la media de rojo y verde. Cada
+  shader y registro tocado va al registro una vez (`[game-filter]`).
+
 - **SpeedBreaker: Yellow Tint Removal funciona de verdad** (0.1.30). La curva de la 0.1.29 se
   calibró con un refugio oscuro y subía el azul unos 11 niveles en los medios tonos, donde una
   carretera a pleno día (rojo 133, verde 127, azul 94) necesita unos 30. Ahora es una parábola

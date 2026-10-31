@@ -49,6 +49,7 @@ namespace settings
         Brightness,    // the game's picture (video/display_tone.h)
         DisplayGamma,  // the 360's display gamma ramp (video/display_gamma.h)
         YellowTint,    // takes the game's yellow cast out of its picture (video/display_tone.h)
+        GameYellowFilter,  // turns the game's own yellow colour filter off (gpu/renderer.cpp, GameFilterConstant)
         Sharpening,
         Anisotropy,
         Mipmaps,
