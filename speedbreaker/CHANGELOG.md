@@ -4,6 +4,16 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.37 (2026-11-01)
+
+- CHEATS > 2x nitro power (your car only). The engine's nitro step
+  (sub_82424988) returns the torque factor: exactly 1.0, or while nitro fires
+  1.0 plus the car's nitro boost. With the cheat on, that boost is doubled for
+  the car whose owner reports driver class 0, the human player, asked through
+  the same getter the game itself uses in that function. Rivals, cops and
+  traffic keep their nitro. Apply with Save & Restart. The first nitro on
+  each car is logged (`[cheats] nitro on engine ...`).
+
 ## v0.1.36 (2026-11-01)
 
 - Remove Game Yellow Filter, for real (Settings > Display, on by default on

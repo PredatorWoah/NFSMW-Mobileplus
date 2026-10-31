@@ -15,10 +15,13 @@ extern "C" PPC_FUNC(__imp__sub_822E8D48);
 extern "C" PPC_FUNC(__imp__sub_82337198);
 extern "C" PPC_FUNC(__imp__sub_8256A940);
 extern "C" PPC_FUNC(__imp__sub_82335F90);
+extern "C" PPC_FUNC(__imp__sub_82424988);
 namespace {
 bool s_cash=false;
 // Unlimited money, all cars, Challenge Series stars (Initialize; read-only after).
 bool s_money=false,s_cars=false,s_stars=false;
+// 2x nitro, the player's car only (Initialize; read-only after).
+bool s_nitro2x=false;
 constexpr uint32_t kPayoutReturn=0x82364890;
 bool ExpectedPayoutCode() {
     // Check the owning USA call and complete conversion/add/store sequence.
@@ -43,6 +46,34 @@ bool Writable(uint32_t address) {
         (info.protect&(0x04|0x40)) && uint64_t(address)+4<=uint64_t(info.baseAddress)+info.regionSize;
 }
 uint8_t Byte(uint32_t address) {return *static_cast<const uint8_t*>(g_memory.Translate(address));}
+// sub_82424988 is the engine's nitro step (this = the engine, +0xFC the
+// charge, +0x104 the boost fading out). It returns the engine's torque factor:
+// exactly 1.0 (the constant at 82063038), or while nitro fires 1.0 plus the
+// car's nitro boost (its NOS attributes, +0x128 -> +4). The drain skips owners
+// whose driver class (vtable +88 of [this+0x48]) is 6, remote; 0 is the human
+// player. The same words Codex checked for unlimited nitro, plus the return.
+bool NitroCode() {
+    return Matches({{0x82424B78,0x3D6082A3},{0x82424B80,0x88ABCE71},{0x82424B84,0x2B050000},{0x82424B88,0x409A0020},
+        {0x82424BA8,0xFFE0F090},{0x82424BE4,0xD1BF00FC},{0x82424C18,0xD1BF00FC}}) &&
+        Word(0x82063038)==0x3F800000;  // the 1.0 it returns when nitro is off
+}
+// The engine's owner says what drives it: the guest's own virtual getter,
+// called the way sub_82424988 calls it. -1 when anything looks off.
+int DriverClass(PPCContext& ctx,uint8_t* base,uint32_t engine) {
+    auto inImage=[](uint32_t a){return a>=0x82000000 && a<0x82CD0000-4 && !(a&3);};
+    if(!Writable(engine+0x48))return -1;
+    const uint32_t owner=Word(engine+0x48);
+    if(!Writable(owner))return -1;
+    const uint32_t vtable=Word(owner);
+    if(!inImage(vtable+88))return -1;
+    const uint32_t function=Word(vtable+88);
+    PPCFunc* getter=inImage(function)?g_memory.FindFunction(function):nullptr;
+    if(!getter)return -1;
+    PPCContext call=ctx;  // (the caller's frame is free below r1)
+    call.r3.u64=owner;
+    getter(call,base);
+    return call.r3.s32;
+}
 bool UsaInfiniteMeters(bool supportedUsa,bool nitro,bool speedbreaker) {
     if(!supportedUsa)return false;
     constexpr uint32_t guards[][2]={
@@ -116,6 +147,12 @@ void Initialize(bool supportedUsa) {
         if(line=="unlimited_money=1")s_money=true;
         if(line=="unlock_all_cars=1")s_cars=true;
         if(line=="challenge_stars=1")s_stars=true;
+        if(line=="nitro_2x=1")s_nitro2x=true;
+    }
+    if(s_nitro2x) {
+        const bool code=supportedUsa && NitroCode();
+        fprintf(stderr,"[cheats] 2x nitro (your car) selected=1 eligible=%d active=%d\n",supportedUsa,code);
+        s_nitro2x=code;
     }
     const bool money=s_money,cars=s_cars,stars=s_stars;
     s_money=money && supportedUsa && MoneyCode();
@@ -226,4 +263,26 @@ PPC_FUNC(sub_82337760) {
     ctx.f1.f64=game::cheats::CareerCashReward(cash,old);
     if(ctx.f1.f64!=old)fprintf(stderr,"[cheats] USA career payout: cash=%u reward=%.3f -> %.3f, target=%u; guest performs store\n",
         cash,old,ctx.f1.f64,game::cheats::kCareerCashTarget);
+}
+// 2x nitro, the player's car only: the nitro's share of the torque factor
+// (result - 1.0) doubled while it fires; every other car, and every frame
+// without nitro, keeps the game's own number.
+PPC_FUNC(sub_82424988) {
+    const uint32_t engine=ctx.r3.u32;
+    __imp__sub_82424988(ctx,base);
+    const double factor=ctx.f1.f64;
+    if(!s_nitro2x || !(factor>1.0) || !(factor<16.0))return;
+    const int driver=DriverClass(ctx,base,engine);
+    static int logged=0;
+    if(logged<6) {
+        static uint32_t seen[6];
+        bool fresh=true;
+        for(int i=0;i<logged;i++)fresh=fresh && seen[i]!=engine;
+        if(fresh) {
+            seen[logged++]=engine;
+            fprintf(stderr,"[cheats] nitro on engine %08X, driver class %d: factor %.3f%s\n",engine,driver,factor,
+                driver==0?std::format(" -> {:.3f} (2x)",1.0+2.0*(factor-1.0)).c_str():" (not yours: unchanged)");
+        }
+    }
+    if(driver==0)ctx.f1.f64=1.0+2.0*(factor-1.0);
 }
