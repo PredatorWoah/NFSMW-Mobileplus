@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 35,
-  "versionName": "0.1.34",
-  "notes": "The memory scanner is removed (it caused frame hiccups and found nothing). The yellow-filter option is now a diagnostic that logs the colour numbers of three frames, to find the filter at its source. Yellow Tint Removal (0-5) is unchanged.",
+  "versionCode": 36,
+  "versionName": "0.1.35",
+  "notes": "The colour-filter diagnostic now captures during a race (it only caught the boot screens before). Switch 'Log Colour Filter (diagnostic)' on in a race, drive about two minutes, and send the log. Yellow Tint Removal (0-5) is unchanged.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
