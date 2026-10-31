@@ -21,6 +21,13 @@ proyecto vibe-codeado: ver la sección "This fork" del [README](README.md).
 
 ### Corregido
 
+- **SpeedBreaker: fuera el filtro amarillo, de verdad; fuera el layout SAVED** (0.1.36). Las capturas en
+  carrera lo encontraron: el pase HDR final del juego (cinco texturas) recibe una curva de color en
+  c6-c9 cuyo rojo, verde y azul son un mismo tinte escalado por fila, 0,85 / 0,75 / 0,25, igual en
+  las cuatro capturas. Con Remove Game Yellow Filter (activado por defecto en Android) el azul de esas
+  filas pasa a la media de rojo y verde, solo en ese shader. El layout táctil SAVED desaparece; el
+  botón alterna RACING y XBOX.
+
 - **SpeedBreaker: el diagnóstico del filtro ahora capta la carrera** (0.1.35). El registro de la 0.1.34
   solo traía los fotogramas de arranque (la opción seguía guardada como activada, no hubo
   activación en juego). Mostraron los pases HDR del juego y un pase de composición de dos texturas

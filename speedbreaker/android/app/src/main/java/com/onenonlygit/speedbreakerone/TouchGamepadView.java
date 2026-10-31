@@ -62,7 +62,7 @@ final class TouchGamepadView extends View {
     private static final int A=1, B=1<<1, X=1<<2, Y=1<<3, BACK=1<<4, START=1<<6,
             LB=1<<9, RB=1<<10, UP=1<<11, DOWN=1<<12, LEFT=1<<13, RIGHT=1<<14;
     private static final int BUTTON=0, BRAKE=2, GAS=3, STEER_LEFT=4, STEER_RIGHT=5, STICK_L=6, STICK_R=7;
-    static final String RACING="racing", XBOX="xbox", SAVED="saved";
+    static final String RACING="racing", XBOX="xbox";
 
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final ArrayList<Control> controls=new ArrayList<>();
@@ -110,9 +110,12 @@ final class TouchGamepadView extends View {
         setFocusable(false);setContentDescription("Touch gamepad: racing or Xbox layout, editable");
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         settings=context.getSharedPreferences("touch_layouts",Context.MODE_PRIVATE);
-        boolean hasSaved=!context.getSharedPreferences("touch_layout_v1",Context.MODE_PRIVATE).getAll().isEmpty();
-        String active=settings.getString("active",hasSaved?SAVED:RACING);
-        layoutName=XBOX.equals(active)?XBOX:SAVED.equals(active)?SAVED:RACING;
+        // The old SAVED layout (the first vivo build's, prefs touch_layout_v1) is
+        // gone: the owner keeps RACING and XBOX. Its positions are deleted and a
+        // player who had it active lands on RACING.
+        android.content.SharedPreferences old=context.getSharedPreferences("touch_layout_v1",Context.MODE_PRIVATE);
+        if(!old.getAll().isEmpty())old.edit().clear().apply();
+        layoutName=XBOX.equals(settings.getString("active",RACING))?XBOX:RACING;
         android.content.SharedPreferences haptics=context.getSharedPreferences(HAPTICS,Context.MODE_PRIVATE);
         tapOn=haptics.getBoolean("tap",true);
         if(!previewOnly) {
@@ -136,7 +139,7 @@ final class TouchGamepadView extends View {
     }
     @Override protected void onDetachedFromWindow() {pause();super.onDetachedFromWindow();}
     private SharedPreferences layout() {
-        return getContext().getSharedPreferences(SAVED.equals(layoutName)?"touch_layout_v1":"touch_layout_"+layoutName,Context.MODE_PRIVATE);
+        return getContext().getSharedPreferences("touch_layout_"+layoutName,Context.MODE_PRIVATE);
     }
 
     // --- The two layouts. Positions are fractions of the screen; buttons are
@@ -154,25 +157,7 @@ final class TouchGamepadView extends View {
         float w=getWidth(),h=getHeight(),rad=h*r;
         controls.add(new Control(id,label,null,0,kind,true,new RectF(cx*w-rad,cy*h-rad,cx*w+rad,cy*h+rad)));
     }
-    // Existing installations keep their exact IDs, geometry and full D-pad.
-    // The original preferences remain authoritative; no migration overwrites them.
-    private void savedButton(String id,int mask,float cx,float cy,float radius) {
-        round(id,id,null,mask,cx,cy,radius);
-    }
-    private void savedDefaults() {
-        savedButton("A",A,.87f,.79f,.052f);savedButton("B",B,.93f,.66f,.052f);
-        savedButton("X",X,.81f,.66f,.052f);savedButton("Y",Y,.87f,.53f,.052f);
-        savedButton("BACK",BACK,.41f,.12f,.052f);savedButton("SET",BACK|START,.50f,.12f,.052f);
-        savedButton("START",START,.59f,.12f,.052f);
-        savedButton("LB",LB,.70f,.32f,.052f);savedButton("RB",RB,.81f,.32f,.052f);
-        savedButton("UP",UP,.16f,.20f,.052f);savedButton("DOWN",DOWN,.16f,.40f,.052f);
-        savedButton("LEFT",LEFT,.115f,.30f,.052f);savedButton("RIGHT",RIGHT,.205f,.30f,.052f);
-        box("steer-left","◀ LEFT",null,0,STEER_LEFT,.055f,.70f,.145f,.90f);
-        box("steer-right","RIGHT ▶",null,0,STEER_RIGHT,.165f,.70f,.255f,.90f);
-        box("brake","BRAKE / LT",null,0,BRAKE,.55f,.72f,.65f,.89f);
-        box("gas","GAS / RT",null,0,GAS,.67f,.72f,.77f,.89f);
-    }
-    private String layoutLabel() {return SAVED.equals(layoutName)?"SAVED":XBOX.equals(layoutName)?"XBOX":"RACING";}
+    private String layoutLabel() {return XBOX.equals(layoutName)?"XBOX":"RACING";}
     private void racingDefaults() {
         box("steer-left","◀",null,0,STEER_LEFT,.025f,.60f,.135f,.93f);
         box("steer-right","▶",null,0,STEER_RIGHT,.150f,.60f,.260f,.93f);
@@ -207,7 +192,7 @@ final class TouchGamepadView extends View {
     }
     private void buildControls(boolean saved) {
         controls.clear();int w=getWidth(),h=getHeight();if(w<=0 || h<=0)return;
-        if(SAVED.equals(layoutName))savedDefaults();else if(XBOX.equals(layoutName))xboxDefaults();else racingDefaults();
+        if(XBOX.equals(layoutName))xboxDefaults();else racingDefaults();
         if(saved) {
             SharedPreferences layout=layout();
             for(Control c:controls) {
@@ -222,8 +207,7 @@ final class TouchGamepadView extends View {
     }
     private void switchLayout() {
         reset();
-        String next=SAVED.equals(layoutName)?RACING:RACING.equals(layoutName)?XBOX:
-                !getContext().getSharedPreferences("touch_layout_v1",Context.MODE_PRIVATE).getAll().isEmpty()?SAVED:RACING;
+        String next=RACING.equals(layoutName)?XBOX:RACING;
         if(!settings.edit().putString("active",next).commit())return;
         layoutName=next;
         android.util.Log.i("SpeedBreakerOne","[touch-ui] layout "+layoutName);
@@ -246,10 +230,10 @@ final class TouchGamepadView extends View {
     }
 
     // --- The top bar: layout switch (centre), EDIT and CHEATS (right).
-    private RectF layoutButton() {float w=getWidth(),h=getHeight();return SAVED.equals(layoutName)?new RectF(w*.025f,h*.025f,w*.23f,h*.085f):new RectF(w*.38f,h*.025f,w*.62f,h*.105f);}
+    private RectF layoutButton() {float w=getWidth(),h=getHeight();return new RectF(w*.38f,h*.025f,w*.62f,h*.105f);}
     private RectF editButton() {float w=getWidth(),h=getHeight();return new RectF(w*.755f,h*.025f,w*.855f,h*.105f);}
     private RectF cheatsButton() {float w=getWidth(),h=getHeight();return new RectF(w*.87f,h*.025f,w*.975f,h*.105f);}
-    private RectF settingsButton() {float w=getWidth(),h=getHeight();return SAVED.equals(layoutName)?new RectF(w*.25f,h*.025f,w*.37f,h*.105f):new RectF(w*.025f,h*.025f,w*.145f,h*.105f);}
+    private RectF settingsButton() {float w=getWidth(),h=getHeight();return new RectF(w*.025f,h*.025f,w*.145f,h*.105f);}
     private RectF tool(int i) {
         float w=getWidth(),h=getHeight(),x=w*(.19f+i*.125f);
         return new RectF(x,h*.025f,x+w*.115f,h*.115f);
