@@ -171,11 +171,11 @@ namespace settings
               .table = "video", .key = "yellow_tint", .label = "Yellow Tint Removal",
               .description = "Takes the yellow cast out of the game's picture: lifts blue, most in the mid-tones, and trims red and green a little, a step at a time. 0 is the original look; 5 is about neutral in daylight (it varies a little with the scene). Menus and the HUD drawn over the picture are not touched.",
               .env = "NFSMW_YELLOW_TINT", .defaultValue = 0, .min = 0, .max = 5, .step = 1 },
-            // The game's own filter (Visual Treatment): three numbers, red 0.88, green 0.80, blue 0.44 on the PC; blue
-            // is what makes it yellow. Found in the colour pass's pixel shader constants (experimental).
+            // The game's own filter: its VisualLookEffect colortint, three floats (PC defaults 0.88, 0.80, 0.44; the low
+            // blue is the yellow). Raised in the game's memory (game/yellow_filter.cpp, experimental).
             { .id = Id::GameYellowFilter, .category = Category::Display, .type = Type::Bool, .apply = Apply::Live,
               .table = "video", .key = "remove_game_yellow_filter", .label = "Remove Game Yellow Filter",
-              .description = "Experimental. Raises the blue of the game's own colour filter (its Visual Treatment pass) to match red and green, so the filter stops turning the picture yellow, instead of correcting it afterwards. Menus and the HUD are not touched. If the picture changes in odd places, turn it off and send the log.",
+              .description = "Experimental. Finds the game's own colour filter (its yellow tint, three numbers in its data) in memory and raises its blue, as PC modders do, so the picture is no longer yellow at the source. Menus and the HUD are not touched. If nothing changes, send the log.",
               .env = "NFSMW_REMOVE_YELLOW_FILTER", .defaultValue = 0 },
             { .id = Id::Sharpening, .category = Category::Graphics, .type = Type::Float, .apply = Apply::Live,
               .table = "video", .key = "sharpening", .label = "Sharpening",

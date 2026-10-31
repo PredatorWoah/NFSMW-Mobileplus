@@ -68,6 +68,7 @@ sb_test(vblank_timer_test SOURCES ${RT}/video/vblank_timer.cpp)
 # watchdog that turns it off (video/present_schedule.h, header only).
 sb_test(present_schedule_test)
 sb_test(frame_rate_policy_test SOURCES ${RT}/video/frame_rate_policy.cpp)
+sb_test(yellow_filter_test)
 # When the presenter builds its swapchain again and at what size (an iPhone's
 # view turned portrait by SDL, sizes seen while inactive, SUBOPTIMAL), and the
 # UI's display size: scenarios, then planted wrong rules that must fail one.
