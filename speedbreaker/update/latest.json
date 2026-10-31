@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 33,
-  "versionName": "0.1.32",
-  "notes": "Remove Game Yellow Filter, second try: it now finds the game's own yellow tint numbers in memory and raises the blue, like the PC mods do. Turn it on in Settings > Display (Yellow Tint Removal back to 0) and send the log.",
+  "versionCode": 34,
+  "versionName": "0.1.33",
+  "notes": "Remove Game Yellow Filter now also searches the game's physical memory (where the previous version found nothing) and logs candidates if the numbers differ from the PC's. Turn it on in Settings > Display and send the log.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
