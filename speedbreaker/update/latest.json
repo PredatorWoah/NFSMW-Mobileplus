@@ -1,7 +1,7 @@
 {
   "applicationId": "com.onenonlygit.speedbreakerone",
-  "versionCode": 36,
-  "versionName": "0.1.35",
-  "notes": "The colour-filter diagnostic now captures during a race (it only caught the boot screens before). Switch 'Log Colour Filter (diagnostic)' on in a race, drive about two minutes, and send the log. Yellow Tint Removal (0-5) is unchanged.",
+  "versionCode": 37,
+  "versionName": "0.1.36",
+  "notes": "The game's own yellow filter is now removed at its source (Settings > Display > Remove Game Yellow Filter, on by default; set Yellow Tint Removal back to 0). The SAVED touch layout is gone: RACING and XBOX remain.",
   "url": "https://github.com/PredatorWoah/NFSMW-Mali/releases/latest"
 }
