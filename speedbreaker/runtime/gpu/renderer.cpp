@@ -7865,32 +7865,73 @@ void main()
         e = { key, s_submissionCounter, offset, 0, 1 };
     }
 
-    // Settings > Display > Log Colour Filter (diagnostic). For three frames after
-    // it is switched on, every full-screen-looking draw (a rectangle list, or six
-    // vertices or fewer) logs its pixel shader's float constants, so the game's
-    // colour filter shows up with its real numbers on the 360: ps hash, texture
-    // count, the constants (register, x y z w) that are not all zero. At most 700
-    // lines a switch-on. Costs nothing otherwise.
+    // Settings > Display > Log Colour Filter (diagnostic). With it on, a few
+    // frames of full-screen-looking draws (a rectangle list, or six vertices or
+    // fewer) log their pixel shader's float constants, so the game's colour
+    // filter shows up with its real numbers on the 360: ps hash, texture count,
+    // and the constants (register, x y z w) that are not all zero. A shader
+    // with the same constants as one already logged in the window is skipped.
+    // Armed by switching the option on (not by it being saved on at launch) and,
+    // while it stays on, every 30 s of play for a frame in a heavy scene (1500
+    // draws the frame before: a race, not a menu), four times. At most 400
+    // lines a window. Costs nothing with the option off.
     static void DumpColourPassConstants(bool rect, uint32_t vertexCount)
     {
-        static bool wasOn = false;
-        static uint64_t armedFrame = 0;
-        static uint32_t lines = 0;
+        static int wasOn = -1;
+        static uint64_t armedFrame = 0, nextAuto = 0, countedFrame = 0;
+        static uint32_t lines = 0, autoWindows = 0, drawsNow = 0, drawsBefore = 0;
+        static std::vector<uint64_t> seen;
         const bool on = settings::GetBool(settings::Id::GameYellowFilter);
+        if (wasOn < 0)
+            wasOn = on;  // saved on at launch: not a switch-on
+        if (s_frame != countedFrame)
+        {
+            countedFrame = s_frame;
+            drawsBefore = drawsNow;
+            drawsNow = 0;
+        }
+        drawsNow++;
+        bool arm = false;
+        const char* why = "switched on";
         if (on && !wasOn)
+        {
+            arm = true;
+            autoWindows = 0;
+            nextAuto = s_frame + 1800;
+        }
+        else if (on && autoWindows < 4 && s_frame >= nextAuto && drawsBefore >= 1500 && s_frame > armedFrame + 3)
+        {
+            arm = true;
+            autoWindows++;
+            nextAuto = s_frame + 1800;
+            why = "in play";
+        }
+        wasOn = on;
+        if (arm)
         {
             armedFrame = s_frame;
             lines = 0;
-            fprintf(stderr, "[colour-pass] logging the full-screen draws of the next 3 frames (from frame %llu)\n", (unsigned long long)s_frame);
+            seen.clear();
+            fprintf(stderr, "[colour-pass] logging a frame (%s, frame %llu, %u draws the frame before)\n", why, (unsigned long long)s_frame, drawsBefore);
         }
-        wasOn = on;
-        if (!on || s_frame > armedFrame + 3 || lines >= 700 || !(rect || vertexCount <= 6))
+        if (!on || s_frame > armedFrame + 1 || lines >= 400 || !(rect || vertexCount <= 6))
             return;
+        uint64_t hash = s_ps->hash;
+        for (uint32_t reg = 0; reg < 256; reg++)
+        {
+            if (s_ps->info.constPacked && !((s_ps->info.constUsed[reg / 64] >> (reg % 64)) & 1))
+                continue;
+            const uint32_t* v = &s_regs[XE_GPU_REG_SHADER_CONSTANT_000_X + (256 + reg) * 4];
+            hash = (hash ^ (uint64_t(v[0]) * 31 + v[1] * 131 + v[2] * 1031 + v[3] * 8191 + reg)) * 0x100000001B3ull;
+        }
+        if (std::find(seen.begin(), seen.end(), hash) != seen.end())
+            return;
+        seen.push_back(hash);
         fprintf(stderr, "[colour-pass] frame %llu: ps %016llx vs %016llx, %s, %u vertices, %d textures, constants %s\n", (unsigned long long)s_frame,
             (unsigned long long)s_ps->hash, (unsigned long long)s_vs->hash, rect ? "rect list" : "other", vertexCount,
             __builtin_popcount(s_ps->info.texture2DMask), s_ps->info.constPacked ? "packed" : "all");
         lines++;
-        for (uint32_t reg = 0; reg < 256 && lines < 700; reg++)
+        for (uint32_t reg = 0; reg < 256 && lines < 400; reg++)
         {
             if (s_ps->info.constPacked && !((s_ps->info.constUsed[reg / 64] >> (reg % 64)) & 1))
                 continue;

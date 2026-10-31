@@ -4,6 +4,18 @@ What changed in each SpeedBreaker release, newest first. Each release's notes on
 its entry here, and the game shows the entry once, the first time a new version starts (offline:
 it's built into the game).
 
+## v0.1.35 (2026-11-01)
+
+- Log Colour Filter (diagnostic) now catches the race. The 0.1.34 log only
+  held the boot frames: the option was still saved as on, so nothing was
+  switched on during play. The boot frames did show the game's HDR post
+  passes (luminance weights, blur kernels, tone numbers) and a two-texture
+  composite pass with constants 1 1 1 1 and 2 0 0 1, neutral at the menu.
+  Now switching it on arms a capture (a saved "on" at launch doesn't), and
+  while it is on, a frame is logged every 30 s of racing (heavy scenes only),
+  four times; shaders with the same constants as one already logged in that
+  frame are skipped.
+
 ## v0.1.34 (2026-11-01)
 
 - The memory scanner is gone. The 0.1.33 log: 733 MB scanned (virtual and

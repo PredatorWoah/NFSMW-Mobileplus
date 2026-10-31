@@ -175,7 +175,7 @@ namespace settings
             // shader constants of every full-screen draw go to the log (gpu/renderer.cpp, DumpColourPassConstants).
             { .id = Id::GameYellowFilter, .category = Category::Display, .type = Type::Bool, .apply = Apply::Live,
               .table = "video", .key = "remove_game_yellow_filter", .label = "Log Colour Filter (diagnostic)",
-              .description = "Diagnostic, changes nothing in the picture: when switched on, writes the colour-correction numbers of the next three frames to the log, so the game's own yellow filter can be found and switched off at its source. Switch it on for a second in a race, then off, and send the log.",
+              .description = "Diagnostic, changes nothing in the picture. Switched on (or left on), writes the colour-correction numbers of a few full-screen frames to the log, once on switching on and again every 30 seconds of racing (four times), so the game's own yellow filter can be found and switched off at its source. Switch it on in a race, drive 2 minutes, and send the log.",
               .env = "NFSMW_REMOVE_YELLOW_FILTER", .defaultValue = 0 },
             { .id = Id::Sharpening, .category = Category::Graphics, .type = Type::Float, .apply = Apply::Live,
               .table = "video", .key = "sharpening", .label = "Sharpening",
