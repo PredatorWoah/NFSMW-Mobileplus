@@ -19,9 +19,14 @@ calls, the filesystem, audio, input, and a translation of the Xenos GPU to Direc
 
 The USA-only SpeedBreaker Android work for Vivo X300 Pro is in
 [`speedbreaker/`](speedbreaker/). See the [current device progress and validation limits](speedbreaker/docs/ANDROID_REFERENCE_PORT.md)
-for preserved saves/custom touch layouts, optional Black Edition content, diagnostics,
-and the experimental payout hook. Car reflections and the remaining requested cheats
-are still under investigation. Full game APKs and signing keys are not published here.
+and its [changelog](speedbreaker/CHANGELOG.md). As of **SpeedBreaker One 0.1.38**: 59-60 fps held
+for a 49-minute session (the draw thread on the prime core, compact constants uploads, a capped
+texture cache), the game's own yellow colour filter switched off at its source, a black and gold
+launcher with update checks, RACING and XBOX touch layouts with haptics, save backups, hang and
+stall reports, and optional USA cheats (Black Edition, unlimited nitro/SpeedBreaker/money, all
+cars, Challenge Series, 2x nitro for your car, sure-shot pink slip, plenty of upgrade markers).
+The same source is mirrored in [PredatorWoah/speedbreaker-Mali](https://github.com/PredatorWoah/speedbreaker-Mali).
+Full game APKs and signing keys are not published here.
 
 
 This is a fork of [madelrandel-blip/NFSMW-Recompiled](https://github.com/madelrandel-blip/NFSMW-Recompiled)
@@ -50,8 +55,9 @@ runtime; pick by GPU and by which disc you have.
 in onenonlygit's Android fork, imported from
 [PredatorWoah/speedbreaker-mali](https://github.com/PredatorWoah/speedbreaker-mali) with the
 fixes a Codex session made on the Vivo X300 Pro (Mali shader compiler stall, video and menu
-corruption, BC textures, touch controls), plus a driver-update guard, logs to Downloads and a
-60 Hz display request. Its build is separate: see [docs/speedbreaker.md](docs/speedbreaker.md).
+corruption, BC textures, touch controls), and developed here since (0.1.12 to 0.1.38: the 60 fps
+work, the launcher, the yellow filter switch, the cheats, reports and backups; that fork is kept
+in sync). Its build is separate: see [docs/speedbreaker.md](docs/speedbreaker.md).
 
 ---
 
@@ -72,7 +78,7 @@ at 854×480.
 | Internal resolution scaling | Working, up to 4× |
 | Save games | Working |
 | Multiplayer | **Not working.** The privilege gate is solved; the network layer underneath is not. See [docs/diario/red-y-privilegios.md](docs/diario/red-y-privilegios.md) |
-| Android, Mali (SpeedBreaker engine) | **Racing on a Vivo X300 Pro** (Dimensity 9500, Mali-G1-Ultra, Android 17) from the USA disc alone, ~45–60 fps reported. A separate engine in [speedbreaker/](speedbreaker/): see [Three engines](#three-engines) and [docs/speedbreaker.md](docs/speedbreaker.md) |
+| Android, Mali (SpeedBreaker engine) | **Racing on a Vivo X300 Pro** (Dimensity 9500, Mali-G1-Ultra, Android 17) from the USA disc alone, **59-60 fps held for 49 minutes** (0.1.38 build; occasional dips in dense city scenes). A separate engine in [speedbreaker/](speedbreaker/): see [Three engines](#three-engines) and [docs/speedbreaker.md](docs/speedbreaker.md) |
 | Android (Snapdragon, Turnip) | **In progress.** Boots from the ISO, reaches the menus and races with a Bluetooth controller, with sound. Main menu (3D) at ~50 fps on a Snapdragon 8 Elite with the Qualcomm driver; Turnip loads but is far slower. See [docs/android.md](docs/android.md) |
 
 ## What you need
